@@ -1,0 +1,22 @@
+---
+title: "Master Markdown"
+author: "Yijia Liu, Xinyi Miao, & Eugene Chong"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+tidycensus::census_api_key("3ef31f05bc4961d45eaa1d3e4787a9b4be486b9f", install = TRUE, overwrite = TRUE)
+
+setwd(here::here())
+options(scipen=999)
+```
+
+
+```{r, echo = FALSE}
+library(tidyverse)
+
+
+```
