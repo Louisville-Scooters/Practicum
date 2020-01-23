@@ -6,7 +6,7 @@ library(measurements)
 
 setwd(here::here())
 
-large_file_directory <- paste(str_remove(here(), "\\/Practicum - Louisville Scooters"), 
+data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum"), 
                               "/~data", 
                               sep = "")
 
@@ -14,7 +14,7 @@ base_map <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7
 proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 
 # Read rebalance data ----
-rebalance_file <- paste(large_file_directory, 
+rebalance_file <- paste(data_directory, 
                         "/Louisville-MDS-Status-Changes-2019Dec17.csv",
                         sep = "")
 
