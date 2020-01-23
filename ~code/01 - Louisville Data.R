@@ -6,7 +6,7 @@ library(measurements)
 
 setwd(here::here())
 
-data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum"), 
+data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
                               "/~data", 
                               sep = "")
 
