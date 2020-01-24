@@ -4,13 +4,14 @@ library(tidyverse)
 library(sf)
 library(tidycensus)
 library(lubridate)
+library(here)
 
-large_file_directory <- paste(str_remove(here(), "\\/Practicum-Project"), 
-                              "/~Large Files", 
-                              sep = "")
+data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
+                        "/~data", 
+                        sep = "")
 
 # Read Austin scooter data (2019) ####
-Austin_file <- paste(large_file_directory, 
+Austin_file <- paste(data_directory, 
                      "/Austin.csv",
                      sep = "")
 
