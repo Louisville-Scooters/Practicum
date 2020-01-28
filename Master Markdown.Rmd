@@ -1,0 +1,48 @@
+---
+title: "Scooters"
+author: "Yijia Liu, Xinyi Miao, Eugene Chong"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    theme: cosmo
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+tidycensus::census_api_key("3ef31f05bc4961d45eaa1d3e4787a9b4be486b9f", install = TRUE, overwrite = TRUE)
+
+setwd(here::here())
+options(scipen = 999)
+
+data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
+                              "/~data", 
+                              sep = "")
+```
+
+# Admin
+
+Define functions, directories, color palettes, inputs, etc here.
+
+Standard projection
+
+```{r inputs}
+proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+```
+
+# Read Data
+
+## Louisville
+
+### Base Map
+
+```{r}
+
+```
+
+# Explore and Visualize Data
+
+## Louisville
