@@ -5,6 +5,7 @@ library(sf)
 library(tidycensus)
 library(lubridate)
 library(here)
+options(scipen=999)
 
 data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
                         "/~data", 
@@ -29,6 +30,73 @@ dat_Aus_2019 <- dat_Aus %>%
 
 dat_Aus_2019_june <- dat_Aus_2019 %>%
   subset(Month == 6)
+
+# remove outlier, we focus on trips made in Travis county because only 19 trips started outsides the county.
+dat_Aus_2019_june$`Census Tract Start` <- as.character(dat_Aus_2019_june$`Census Tract Start`)
+dat_Aus_2019_june$`Census Tract End` <- as.character(dat_Aus_2019_june$`Census Tract End`)
+dat_Aus_2019_june_start <- merge(dat_Aus_2019_june, ASTTracts, all.x=F, by.x='Census Tract Start', by.y='GEOID')
+#dat_Aus_2019_june_end <- merge(dat_Aus_2019_june, ASTTracts, all.x=T, by.x='Census Tract End', by.y='GEOID')
+
+#- Add field: time interval-####
+dat_Aus_2019_june_start$`Start Time` <- as.POSIXct(dat_Aus_2019_june_start$`Start Time`, format='%m/%d/%Y %I:%M:%S %p')
+#dat_Aus_2019_june_end$`End Time` <- as.POSIXct(dat_Aus_2019_june_end$`End Time`, format='%m/%d/%Y %I:%M:%S %p')
+dat_Aus_2019_june_start <- dat_Aus_2019_june_start %>%
+  mutate(interval60 = floor_date(ymd_hms(`Start Time`), unit = "hour"),
+         #interval15 = floor_date(ymd_hms(starttime), unit = "15 mins"),
+         week = week(interval60))
+dat_Aus_2019_june_start$`Day of Week` <- weekdays(dat_Aus_2019_june_start$interval60)
+dat_Aus_2019_june_start$`Day of Week` <- factor(dat_Aus_2019_june_start$`Day of Week`, level=c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'))
+
+#- time pattern-####
+# by hour
+ggplot(dat_Aus_2019_june_start %>%
+         group_by(interval60) %>%
+         tally())+
+  geom_line(aes(x = interval60, y = n, group=1),size=.7)+
+  labs(title="Scooter trips per hr. Austin, June, 2019",
+       x="Date", 
+       y="Number of trips")+
+  plotTheme
+# by day of week
+ggplot(data=dat_Aus_2019_june_start) +
+  geom_freqpoly(aes(Hour, col=`Day of Week`), binwidth=1) +
+  labs(title="Scooter trips in Austin by hour, by day of the week, June, 2019",
+       x="Hour", 
+       y="Trip Counts")+
+  scale_color_viridis_d(direction = -1,
+                      option = "D")+
+  plotTheme
+
+#- Scooters turnover-#### 
+sctTov_austin_dow <- dat_Aus_2019_june_start %>%
+  group_by(week,`Day of Week`) %>%
+  summarise(cnt=n(), turnover=cnt/length(unique(`Device ID`)))
+
+sctTov_austin_dow <- sctTov_austin_dow %>%
+  group_by(`Day of Week`)%>%
+  summarise(turnover_m=mean(turnover))
+
+ggplot(data=sctTov_austin_dow, aes(`Day of Week`, turnover_m, group=1))+
+  geom_line(size=1) +
+  labs(title="Turnover rate of scooter in Austin by day of the week, June, 2019",
+       x="Hour", 
+       y="Trip Counts")+
+  plotTheme
+
+sctTov_austin_hour <- dat_Aus_2019_june_start %>%
+  group_by(Hour) %>%
+  summarise(cnt=n(), turnover=cnt/length(unique(`Device ID`))/length(unique(date(interval60))))
+
+ggplot(data=sctTov_austin_hour, aes(Hour, turnover, group=1))+
+  geom_line(size=1) +
+  labs(title="Turnover rate of scooter in Austin by day of the week, June, 2019",
+       x="Hour", 
+       y="Turnoverrate")+
+  plotTheme
+
+
+# Add geometry information to scooter trips data
+
 
 # Read census tract data
 ASTCensus <- 
@@ -64,6 +132,10 @@ ASTTracts <-
   distinct(GEOID, .keep_all = TRUE) %>%
   select(GEOID, geometry) %>% 
   st_sf
+
+ggplot()+
+  geom_sf(data = dat_Aus_2019_june)+
+  geom_sf(data=ASTTracts %>% st_transform(crs=4326), fill='transparent')
 
 
 # Read census data ####
