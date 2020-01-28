@@ -10,16 +10,61 @@ data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Op
                         "/~data", 
                         sep = "")
 
+
 # Read Austin scooter data (2019) ####
-Austin_file <- paste(data_directory, 
-                     "/Austin.csv",
+# Austin_file <- paste(data_directory, 
+#                      "/Austin.csv",
+#                      sep = "")
+
+Austin_file <- paste(data_directory,
+                     "/Shared_Micromobility_Vehicle_Trips_austin.csv",
                      sep = "")
 
 dat_Aus <- read_csv(Austin_file)
 
 dat_Aus_2019 <- dat_Aus %>%
-  filter(Year == 2019,
-         `Vehicle Type` == 'scooter')
+  na.omit() %>%
+  subset((Year == 2019) &
+         (`Vehicle Type` == 'scooter'))
+
+dat_Aus_2019_june <- dat_Aus_2019 %>%
+  subset(Month == 6)
+
+# Read census tract data
+ASTCensus <- 
+  get_acs(geography = "tract", 
+          variables = c("B01003_001", "B19013_001", 
+                        "B02001_002", "B08013_001",
+                        "B08012_001", "B08301_001", 
+                        "B08301_010", "B01002_001"), 
+          year = 2017, 
+          state = "TX", 
+          geometry = TRUE, 
+          county=c("Travis"),
+          output = "wide") %>%
+  rename(Total_Pop =  B01003_001E,
+         Med_Inc = B19013_001E,
+         Med_Age = B01002_001E,
+         White_Pop = B02001_002E,
+         Travel_Time = B08013_001E,
+         Num_Commuters = B08012_001E,
+         Means_of_Transport = B08301_001E,
+         Total_Public_Trans = B08301_010E) %>%
+  select(Total_Pop, Med_Inc, White_Pop, Travel_Time,
+         Means_of_Transport, Total_Public_Trans,
+         Med_Age,
+         GEOID, geometry) %>%
+  mutate(Percent_White = White_Pop / Total_Pop,
+         Mean_Commute_Time = Travel_Time / Total_Public_Trans,
+         Percent_Taking_Public_Trans = Total_Public_Trans / Means_of_Transport)
+
+ASTTracts <- 
+  ASTCensus %>%
+  as.data.frame() %>%
+  distinct(GEOID, .keep_all = TRUE) %>%
+  select(GEOID, geometry) %>% 
+  st_sf
+
 
 # Read census data ####
 census_api_key("6c5e126bca08a1884a7a500d88db30a106f77665", overwrite = TRUE)
