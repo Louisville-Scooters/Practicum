@@ -21,6 +21,7 @@ data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Op
 
 base_map <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7baa9141a95_30.geojson")
 proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+base_map_proj <- base_map %>% st_transform(proj)
 
 # Read rebalance data ----
 rebalance_file <- paste(data_directory, 
@@ -60,12 +61,12 @@ ggplot() +
   theme_minimal()
 
 # fishnet
-boundary <- st_union(base_map) %>% st_sf()
+boundary <- st_union(base_map_proj) %>% st_sf()
 
-cell_area <- conv_unit(0.5, from = "mi2", to = "m2")
+cell_area <- conv_unit(0.5, from = "mi2", to = "ft2")
 cell_size <- (cell_area * (2/3^0.5)) ^ 0.5 # the "cellsize" parameter is the distance between the centroids of each hexagonal cell.
 
-fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %>% 
+lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %>% 
   st_sf() %>% 
   mutate(fishnet_ID = row_number())
 

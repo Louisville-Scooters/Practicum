@@ -27,31 +27,144 @@ data_directory <- paste(stringr::str_remove(here::here(), "\\/Eugene\\/Eugene - 
 
 Define functions, directories, color palettes, inputs, etc here.
 
-Load packages
+## Load packages
 
 ```{r}
 library(sf)
 library(measurements)
 library(tidycensus)
 library(tidyverse)
+library(tmap)
 ```
 
-Standard projection
+## Standard projection
 
-```{r inputs}
+```{r}
 proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 ```
 
-# Read Data
+## Color Palettes
+
+```{r}
+paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
+palette5 <- c("#25CB10", "#5AB60C", "#8FA108","#C48C04", "#FA7800")
+```
+
+# Read/Prep Data
 
 ## Louisville
+
+### Status Changes
+
+```{r}
+rebalance_file <- paste(data_directory, 
+                        "/Louisville-MDS-Status-Changes-2019Dec17.csv",
+                        sep = "")
+
+rebalance_data <- read_csv(rebalance_file)
+```
 
 ### Base Map
 
 ```{r, results = "hide"}
 base_map <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7baa9141a95_30.geojson")
+
+base_map_proj <- base_map %>% st_transform(proj)
 ```
+
+### Fishnet
+
+```{r}
+boundary <- st_union(base_map_proj) %>% st_sf()
+
+cell_area <- conv_unit(0.5, from = "mi2", to = "ft2")
+cell_size <- (cell_area * (2/3^0.5)) ^ 0.5 # the "cellsize" parameter is the distance between the centroids of each hexagonal cell.
+
+lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %>% 
+  st_sf() %>% 
+  mutate(fishnet_ID = row_number())
+```
+
 
 # Explore and Visualize Data
 
 ## Louisville
+
+### Distribution of Scooter Status Change Activities
+
+```{r}
+activity_distro_plot <- rebalance_data %>% 
+  ggplot(aes(x = reason)) +
+  geom_bar(stat = "count", position = "identity") +
+  facet_wrap(~ type, scales = "free") +
+  coord_flip() +
+  labs(x = "Reason for Status Change",
+       y = "Count",
+       title = "Distribution of Scooter Status Change Activities")
+
+activity_distro_plot
+```
+
+### Geographic Distribution of Status Change Activities
+
+```{r}
+rebalance_data_sf <- st_as_sf(rebalance_data,
+                              wkt = "location", 
+                              crs = 4326)
+
+rebalance_data_sf_proj <- rebalance_data_sf %>% 
+  st_transform(proj)
+
+rebalance_only <- rebalance_data_sf_proj %>% 
+  filter(str_detect(reason, "rebalance"))
+rebalance_only <- rebalance_only[base_map_proj,] #intersect data
+```
+
+Scooters tend to be rebalanced from all over Louisville to the waterfront and Old Louisville.
+
+```{r}
+ggplot() +
+  geom_sf(data = base_map_proj, fill = NA, color = "lightgray") +
+  geom_sf(data = rebalance_only, 
+          aes(color = reason),
+          alpha = 0.1) +
+  facet_wrap(~ reason) +
+  theme_minimal()
+```
+
+```{r}
+tmap_mode("view")
+
+tm_shape(rebalance_only %>% sample_n(10000)) +
+  tm_dots(col = "reason", 
+          palette = c("rebalance drop off" = "red",
+                      "rebalance pick up" = "blue"),
+          alpha = 0.2)
+```
+
+```{r}
+rebalance_pickups <- rebalance_only %>% 
+  dplyr::select(reason) %>% 
+  filter(reason == "rebalance pick up")
+
+rebalance_dropoffs <- rebalance_only %>% 
+  dplyr::select(reason) %>% 
+  filter(reason == "rebalance drop off")
+
+lville_fishnet2 <- lville_fishnet %>% 
+  mutate(pickups = lengths(st_intersects(., rebalance_pickups)),
+         dropoffs = lengths(st_intersects(., rebalance_dropoffs))) %>% 
+  gather(key = "Event", value = "Count", pickups:dropoffs)
+
+ggplot() +
+  # geom_sf(data = base_map_proj, fill = NA, color = "lightgray") +
+  geom_sf(data = lville_fishnet2, 
+          aes(fill = log(Count + 1)),
+          alpha = 1) +
+  scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
+  facet_wrap(~ Event) +
+  theme_minimal() +
+  labs(subtitle = "Note these are log-transformed")
+```
+
+
