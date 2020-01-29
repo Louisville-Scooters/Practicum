@@ -53,19 +53,24 @@ LV_Census <-
 
 # plots
 LV_Census_2 <- LV_Census %>% 
-  # mutate(log_Percent_White = log(Percent_White + 1),
-  #        log_Percent_Taking_Public_Trans = log(Percent_Taking_Public_Trans + 1),
-  #        log_Percent_vehicle_available = log(Percent_vehicle_available + 1)) %>% 
+  mutate(Percent_White_quintile = ntile(Percent_White, 5),
+         Percent_Taking_Public_Trans_quintile = ntile(Percent_Taking_Public_Trans, 5),
+         Percent_vehicle_quintile = ntile(Percent_vehicle_available, 5)) %>%
   dplyr::select(GEOID,
                 Percent_White,
                 Mean_Commute_Time,
                 Percent_Taking_Public_Trans,
-                Percent_vehicle_available) %>% 
+                Percent_vehicle_available,
+                Percent_White_quintile,
+                Percent_Taking_Public_Trans_quintile,
+                Percent_vehicle_quintile
+                ) %>%
   gather(key = "variable",
          value = "value",
-         Percent_White:Percent_vehicle_available)
+         Percent_White:Percent_vehicle_quintile)
 
 LV_Census_histogram <- LV_Census_2 %>% 
+  filter(!str_detect(variable, "quintile")) %>% 
   ggplot(aes(x = value)) +
   geom_histogram(bins = 50) +
   facet_wrap(~ variable, 
@@ -75,10 +80,11 @@ LV_Census_histogram
 
 # maps
 LV_Census_map <- ggplot() +
-  geom_sf(data = LV_Census_2,
+  geom_sf(data = LV_Census_2 %>% filter(str_detect(variable, "quintile")),
           aes(fill = value)) +
   scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
-  facet_wrap(~ variable)
+  facet_wrap(~ variable, ncol = 1)
 
 LV_Census_map
+
 
