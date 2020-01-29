@@ -64,6 +64,52 @@ rebalance_file <- paste(data_directory,
 rebalance_data <- read_csv(rebalance_file)
 ```
 
+### Census
+
+```{r}
+#census data
+LV_Census <- 
+  get_acs(geography = "tract", 
+          variables = c("B01003_001", "B19013_001", 
+                        "B02001_002", "B08013_001",
+                        "B08012_001", "B08301_001", 
+                        "B08301_010", "B01002_001",
+                        "B08014_001", "B08014_002"), 
+          year = 2018, 
+          state = "KY", 
+          geometry = TRUE, 
+          county = c("Jefferson"),
+          output = "wide") %>%
+  rename(Total_Pop =  B01003_001E,
+         Med_Inc = B19013_001E,
+         Med_Age = B01002_001E,
+         White_Pop = B02001_002E,
+         Vehicle_own_pop = B08014_001E,
+         No_vehicle = B08014_002E,
+         Total_Travel_Time = B08013_001E,
+         Num_Commuters = B08012_001E,
+         Means_of_Transport_pop = B08301_001E,
+         Total_Public_Trans = B08301_010E) %>%
+  dplyr::select(Total_Pop, 
+                Med_Inc, 
+                White_Pop, 
+                Total_Travel_Time,
+                Means_of_Transport_pop, 
+                Total_Public_Trans,
+                Num_Commuters,
+                Med_Age,
+                Vehicle_own_pop,
+                No_vehicle,
+                GEOID, 
+                geometry) %>%
+  mutate(Percent_White = White_Pop / Total_Pop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         Percent_Taking_Public_Trans = Total_Public_Trans / Means_of_Transport_pop,
+         Percent_vehicle_available = 1 - No_vehicle / Vehicle_own_pop) %>% 
+  st_transform(proj)
+```
+
+
 ### Base Map
 
 ```{r, results = "hide"}
@@ -74,10 +120,12 @@ base_map_proj <- base_map %>% st_transform(proj)
 
 ### Fishnet
 
+1/10th of a square mile each
+
 ```{r}
 boundary <- st_union(base_map_proj) %>% st_sf()
 
-cell_area <- conv_unit(0.5, from = "mi2", to = "ft2")
+cell_area <- conv_unit(0.1, from = "mi2", to = "ft2")
 cell_size <- (cell_area * (2/3^0.5)) ^ 0.5 # the "cellsize" parameter is the distance between the centroids of each hexagonal cell.
 
 lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %>% 
@@ -132,15 +180,6 @@ ggplot() +
   theme_minimal()
 ```
 
-```{r}
-tmap_mode("view")
-
-tm_shape(rebalance_only %>% sample_n(10000)) +
-  tm_dots(col = "reason", 
-          palette = c("rebalance drop off" = "red",
-                      "rebalance pick up" = "blue"),
-          alpha = 0.2)
-```
 
 ```{r}
 rebalance_pickups <- rebalance_only %>% 
@@ -150,7 +189,29 @@ rebalance_pickups <- rebalance_only %>%
 rebalance_dropoffs <- rebalance_only %>% 
   dplyr::select(reason) %>% 
   filter(reason == "rebalance drop off")
+```
 
+Rebalance Pickups
+
+```{r}
+tmap_mode("view")
+
+tm_shape(rebalance_pickups %>% sample_n(10000)) +
+  tm_dots(col = "red",
+          alpha = 0.2)
+```
+
+Rebalance Dropoffs
+
+```{r}
+tm_shape(rebalance_dropoffs %>% sample_n(10000)) +
+  tm_dots(col = "blue",
+          alpha = 0.2)
+```
+
+
+
+```{r}
 lville_fishnet2 <- lville_fishnet %>% 
   mutate(pickups = lengths(st_intersects(., rebalance_pickups)),
          dropoffs = lengths(st_intersects(., rebalance_dropoffs))) %>% 
@@ -166,5 +227,37 @@ ggplot() +
   theme_minimal() +
   labs(subtitle = "Note these are log-transformed")
 ```
+
+### Census Variables
+
+* Percent White
+* Mean Commute Time
+* Percent Public Transit Riders
+* Percent with a Vehicle
+
+```{r}
+LV_Census_2 <- LV_Census %>% 
+  dplyr::select(GEOID,
+                Percent_White,
+                Mean_Commute_Time,
+                Percent_Taking_Public_Trans,
+                Percent_vehicle_available) %>% 
+  gather(key = "variable",
+         value = "value",
+         Percent_White:Percent_vehicle_available)
+
+LV_Census_histogram <- LV_Census_2 %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 50) +
+  facet_wrap(~ variable, 
+             scales = "free")
+
+LV_Census_histogram
+```
+
+
+
+
+
 
 
