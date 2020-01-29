@@ -125,7 +125,7 @@ base_map_proj <- base_map %>% st_transform(proj)
 ```{r}
 boundary <- st_union(base_map_proj) %>% st_sf()
 
-cell_area <- conv_unit(0.1, from = "mi2", to = "ft2")
+cell_area <- conv_unit(0.5, from = "mi2", to = "ft2")
 cell_size <- (cell_area * (2/3^0.5)) ^ 0.5 # the "cellsize" parameter is the distance between the centroids of each hexagonal cell.
 
 lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %>% 
@@ -235,18 +235,28 @@ ggplot() +
 * Percent Public Transit Riders
 * Percent with a Vehicle
 
+histograms
+
 ```{r}
 LV_Census_2 <- LV_Census %>% 
+  mutate(Percent_White_quintile = ntile(Percent_White, 5),
+         Percent_Taking_Public_Trans_quintile = ntile(Percent_Taking_Public_Trans, 5),
+         Percent_vehicle_quintile = ntile(Percent_vehicle_available, 5)) %>%
   dplyr::select(GEOID,
                 Percent_White,
                 Mean_Commute_Time,
                 Percent_Taking_Public_Trans,
-                Percent_vehicle_available) %>% 
+                Percent_vehicle_available,
+                Percent_White_quintile,
+                Percent_Taking_Public_Trans_quintile,
+                Percent_vehicle_quintile
+                ) %>%
   gather(key = "variable",
          value = "value",
-         Percent_White:Percent_vehicle_available)
+         Percent_White:Percent_vehicle_quintile)
 
 LV_Census_histogram <- LV_Census_2 %>% 
+  filter(!str_detect(variable, "quintile")) %>% 
   ggplot(aes(x = value)) +
   geom_histogram(bins = 50) +
   facet_wrap(~ variable, 
@@ -255,7 +265,16 @@ LV_Census_histogram <- LV_Census_2 %>%
 LV_Census_histogram
 ```
 
+maps by quintile
+```{r}
+LV_Census_map <- ggplot() +
+  geom_sf(data = LV_Census_2 %>% filter(str_detect(variable, "quintile")),
+          aes(fill = value)) +
+  scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
+  facet_wrap(~ variable, ncol = 1)
 
+LV_Census_map
+```
 
 
 
