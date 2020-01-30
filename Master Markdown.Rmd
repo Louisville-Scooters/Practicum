@@ -275,12 +275,12 @@ Austin_file <- paste(data_directory,
                      sep = "")
 
 dat_Aus <- read_csv(Austin_file)
-# rm(dat_Aus)
 
 dat_Aus_2019 <- dat_Aus %>%
   na.omit() %>%
   filter((Year == 2019) &
          (`Vehicle Type` == 'scooter'))
+rm(dat_Aus)
 
 dat_Aus_2019_june <- dat_Aus_2019 %>%
   filter(Month == 6)
