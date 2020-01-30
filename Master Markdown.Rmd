@@ -35,6 +35,9 @@ library(measurements)
 library(tidycensus)
 library(tidyverse)
 library(tmap)
+library(lubridate)
+library(knitr)
+library(kableExtra)
 ```
 
 ## Standard projection
@@ -43,11 +46,87 @@ library(tmap)
 proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 ```
 
-## Color Palettes
+## Themes and Color Palettes
 
 ```{r}
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
 palette5 <- c("#25CB10", "#5AB60C", "#8FA108","#C48C04", "#FA7800")
+```
+
+```{r}
+plotTheme <- theme(
+  plot.title =element_text(size=15),
+  plot.subtitle = element_text(size=8),
+  plot.caption = element_text(size = 6),
+  axis.text.x = element_text(size = 10, hjust = 1),
+  axis.text.y = element_text(size = 10),
+  axis.title.y = element_text(size = 10),
+  # Set the entire chart region to blank
+  panel.background=element_blank(),
+  plot.background=element_blank(),
+  #panel.border=element_rect(colour="#F0F0F0"),
+  # Format the grid
+  panel.grid.major=element_line(colour="#D0D0D0",size=.2),
+  axis.ticks=element_blank())
+
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 14,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2)
+  )
+}
+```
+
+## Census Variables
+
+```{r}
+census_df <- data.frame(vars =     c("B01003_001E", 
+                                     "B19013_001E", 
+                                     "B02001_002E", 
+                                     "B08013_001E",
+                                     "B08012_001E",
+                                     "B08301_001E",
+                                     "B08301_010E",
+                                     "B01002_001E",
+                                     "B08014_001E",
+                                     "B08014_002E"),
+                        
+                        colNames = c("Total_Pop",
+                                     "Med_Inc",
+                                     "Med_Age",
+                                     "White_Pop",
+                                     "Vehicle_own_pop",
+                                     "No_vehicle",
+                                     "Total_Travel_Time",
+                                     "Num_Commuters",
+                                     "Means_of_Transport_pop",
+                                     "Total_Public_Trans"),
+                        stringsAsFactors = FALSE)
+
+census_vars <- census_df$vars
+census_colNames <- census_df$colNames
+```
+
+## Helper Functions
+
+```{r}
+rename_census_cols <- function(x){
+  
+  output <- x %>% 
+    rename_at(vars(census_vars), 
+              ~ census_colNames)
+
+  output
+}
 ```
 
 # Read/Prep Data
@@ -61,7 +140,29 @@ rebalance_file <- paste(data_directory,
                         "/Louisville-MDS-Status-Changes-2019Dec17.csv",
                         sep = "")
 
-rebalance_data <- read_csv(rebalance_file)
+rebalance_data <- read_csv(rebalance_file) %>% 
+  mutate(operators = ifelse(operators == "Bolt Lousiville", # correct typo in data
+                            "Bolt Louisville",
+                            operators),
+         year = year(occurredAt),
+         month = month(occurredAt),
+         weekday = weekdays(occurredAt))
+
+rebalance_data_sf <- st_as_sf(rebalance_data,
+                              wkt = "location", 
+                              crs = 4326) %>% 
+  st_transform(proj)
+```
+
+### Service Area
+
+```{r}
+sa_file <- paste(data_directory, 
+                        "/Dockless Vehicle Service Area/Dockless_Vehicle_Service_Area.shp",
+                        sep = "")
+
+sa <- read_sf(sa_file) %>% 
+  st_transform(proj)
 ```
 
 ### Census
@@ -69,37 +170,36 @@ rebalance_data <- read_csv(rebalance_file)
 ```{r}
 #census data
 LV_Census <- 
-  get_acs(geography = "tract", 
-          variables = c("B01003_001", "B19013_001", 
-                        "B02001_002", "B08013_001",
-                        "B08012_001", "B08301_001", 
-                        "B08301_010", "B01002_001",
-                        "B08014_001", "B08014_002"), 
-          year = 2018, 
-          state = "KY", 
-          geometry = TRUE, 
+  get_acs(geography = "tract",
+          variables = census_vars,
+          year = 2018,
+          state = "KY",
+          geometry = TRUE,
           county = c("Jefferson"),
           output = "wide") %>%
-  rename(Total_Pop =  B01003_001E,
-         Med_Inc = B19013_001E,
-         Med_Age = B01002_001E,
-         White_Pop = B02001_002E,
-         Vehicle_own_pop = B08014_001E,
-         No_vehicle = B08014_002E,
-         Total_Travel_Time = B08013_001E,
-         Num_Commuters = B08012_001E,
-         Means_of_Transport_pop = B08301_001E,
-         Total_Public_Trans = B08301_010E) %>%
-  dplyr::select(Total_Pop, 
-                Med_Inc, 
-                White_Pop, 
-                Total_Travel_Time,
-                Means_of_Transport_pop, 
-                Total_Public_Trans,
-                Num_Commuters,
-                Med_Age,
-                Vehicle_own_pop,
-                No_vehicle,
+  # rename(Total_Pop =  B01003_001E,
+  #        Med_Inc = B19013_001E,
+  #        Med_Age = B01002_001E,
+  #        White_Pop = B02001_002E,
+  #        Vehicle_own_pop = B08014_001E,
+  #        No_vehicle = B08014_002E,
+  #        Total_Travel_Time = B08013_001E,
+  #        Num_Commuters = B08012_001E,
+  #        Means_of_Transport_pop = B08301_001E,
+  #        Total_Public_Trans = B08301_010E) %>%
+  rename_census_cols() %>% 
+  dplyr::select(
+    # Total_Pop,
+  #               Med_Inc, 
+  #               White_Pop, 
+  #               Total_Travel_Time,
+  #               Means_of_Transport_pop, 
+  #               Total_Public_Trans,
+  #               Num_Commuters,
+  #               Med_Age,
+  #               Vehicle_own_pop,
+  #               No_vehicle,
+                census_colNames,
                 GEOID, 
                 geometry) %>%
   mutate(Percent_White = White_Pop / Total_Pop,
@@ -133,6 +233,96 @@ lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %
   mutate(fishnet_ID = row_number())
 ```
 
+## Austin
+
+### Census
+
+```{r}
+ASTCensus <- 
+  get_acs(geography = "tract", 
+          variables = census_vars, 
+          year = 2018, 
+          state = "TX", 
+          geometry = TRUE, 
+          county = c("Travis"),
+          output = "wide") %>%
+  rename_census_cols() %>% 
+  dplyr::select(census_colNames,
+                GEOID, 
+                geometry) %>%
+  mutate(Percent_White = White_Pop / Total_Pop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         Percent_Taking_Public_Trans = Total_Public_Trans / Means_of_Transport_pop,
+         Percent_vehicle_available = 1 - No_vehicle / Vehicle_own_pop) %>% 
+  st_transform(proj)
+
+ASTTracts <- 
+  ASTCensus %>%
+  as.data.frame() %>%
+  distinct(GEOID, .keep_all = TRUE) %>%
+  select(GEOID, geometry) %>% 
+  st_sf() %>% 
+  st_transform(proj)
+```
+
+### Trips 
+
+Subset to June 2019
+
+```{r}
+Austin_file <- paste(data_directory,
+                     "/Shared_Micromobility_Vehicle_Trips_austin.csv",
+                     sep = "")
+
+dat_Aus <- read_csv(Austin_file)
+# rm(dat_Aus)
+
+dat_Aus_2019 <- dat_Aus %>%
+  na.omit() %>%
+  filter((Year == 2019) &
+         (`Vehicle Type` == 'scooter'))
+
+dat_Aus_2019_june <- dat_Aus_2019 %>%
+  filter(Month == 6)
+```
+
+Remove outliers and keep only trips in Travis County. Only 19 trips were outside of the county.
+
+```{r}
+dat_Aus_2019_june$`Census Tract Start` <- as.character(dat_Aus_2019_june$`Census Tract Start`)
+dat_Aus_2019_june$`Census Tract End` <- as.character(dat_Aus_2019_june$`Census Tract End`)
+dat_Aus_2019_june_start <- merge(dat_Aus_2019_june, ASTTracts, all.x=F, by.x='Census Tract Start', by.y='GEOID')
+```
+
+#### Add Time Interval
+
+```{r}
+dat_Aus_2019_june_start$`Start Time` <- as.POSIXct(dat_Aus_2019_june_start$`Start Time`, format='%m/%d/%Y %I:%M:%S %p')
+#dat_Aus_2019_june_end$`End Time` <- as.POSIXct(dat_Aus_2019_june_end$`End Time`, format='%m/%d/%Y %I:%M:%S %p')
+dat_Aus_2019_june_start <- dat_Aus_2019_june_start %>%
+  mutate(interval60 = floor_date(ymd_hms(`Start Time`), unit = "hour"),
+         #interval15 = floor_date(ymd_hms(starttime), unit = "15 mins"),
+         week = week(interval60))
+dat_Aus_2019_june_start$`Day of Week` <- weekdays(dat_Aus_2019_june_start$interval60)
+dat_Aus_2019_june_start$`Day of Week` <- factor(dat_Aus_2019_june_start$`Day of Week`,
+                                                level=c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'))
+```
+
+#### Scooter Turnover
+
+```{r}
+sctTov_austin_dow <- dat_Aus_2019_june_start %>%
+  group_by(week,`Day of Week`) %>%
+  summarise(cnt=n(), turnover=cnt/length(unique(`Device ID`)))
+
+sctTov_austin_dow <- sctTov_austin_dow %>%
+  group_by(`Day of Week`)%>%
+  summarise(turnover_m=mean(turnover))
+
+sctTov_austin_hour <- dat_Aus_2019_june_start %>%
+  group_by(Hour) %>%
+  summarise(cnt=n(), turnover=cnt/length(unique(`Device ID`))/length(unique(date(interval60))))
+```
 
 # Explore and Visualize Data
 
@@ -153,20 +343,82 @@ activity_distro_plot <- rebalance_data %>%
 activity_distro_plot
 ```
 
-### Geographic Distribution of Status Change Activities
+### Frequency of Rebalancing
 
 ```{r}
-rebalance_data_sf <- st_as_sf(rebalance_data,
-                              wkt = "location", 
-                              crs = 4326)
-
-rebalance_data_sf_proj <- rebalance_data_sf %>% 
-  st_transform(proj)
-
-rebalance_only <- rebalance_data_sf_proj %>% 
+rebalance_only <- rebalance_data_sf %>% 
   filter(str_detect(reason, "rebalance"))
 rebalance_only <- rebalance_only[base_map_proj,] #intersect data
+
+users_only <- rebalance_data_sf %>% 
+  filter(str_detect(reason, "user"))
+users_only <- users_only[base_map_proj,] #intersect data
 ```
+
+```{r}
+rps <- rebalance_only %>% 
+  group_by(year, month) %>% 
+  summarise(cnt = n(), 
+            per = cnt / length(unique(vehicleId))) %>% 
+  ungroup() %>% 
+  mutate(year_mon = zoo::as.Date(zoo::as.yearmon(paste(year, month), "%Y %m"),
+                            frac = 0))
+```
+
+Monthly Rebalances per Scooter
+
+```{r}
+ggplot(data = rps %>% filter(year == 2019), aes(x = year_mon, 
+                                                per, 
+                                                group = 1))+
+  geom_line(size = 1) +
+  plotTheme
+```
+
+By day of week in June
+
+```{r}
+#by day of week in June
+rps_dow <- rebalance_only %>% 
+  group_by(month, weekday) %>% 
+  summarise(cnt = n(), 
+            per = cnt / length(unique(vehicleId))) %>%
+  ungroup() %>% 
+  group_by(weekday) %>% 
+  summarise(perd = mean(per)) %>% 
+  mutate(weekday = factor(weekday,
+                          level = c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')))
+```
+
+
+```{r}
+ggplot(data = rps_dow, 
+       aes(x = weekday, 
+           y = perd, 
+           group = 1))+
+  geom_line(size = 1) +
+  plotTheme
+```
+
+### Rebalancing by Provider
+
+```{r}
+contribution <- as.data.frame(prop.table(table(rebalance_only$operators)),
+                              stringsAsFactors = FALSE) %>% 
+  rename(Provider = Var1,
+         Proportion = Freq) %>%
+  mutate(Proportion = round(Proportion, 2)) %>% 
+  rbind(c('Bird Louisville', 0),
+        c('Spin Louisville',0))
+
+contribution %>% 
+  kable(caption = "Contribution by providers") %>%
+  kable_styling("striped", full_width = F,position = "center") %>%
+  row_spec(2, color = "white", background = "#33638dff") %>%
+  row_spec(4, color = "white", background = "#33638dff")
+```
+
+### Geographic Distribution of Status Change Activities
 
 Scooters tend to be rebalanced from all over Louisville to the waterfront and Old Louisville.
 
@@ -209,7 +461,26 @@ tm_shape(rebalance_dropoffs %>% sample_n(10000)) +
           alpha = 0.2)
 ```
 
+#### Trips in June 2019 Only
 
+Limit to June 2019, remove trips outside service area
+
+```{r}
+rebalance_june <- rebalance_data_sf %>% 
+  filter(year == 2019,
+         month == 6)
+
+rebalance_june_sa <- st_intersection(rebalance_june, sa)
+```
+
+```{r}
+ggplot()+
+  geom_sf(data = rebalance_june_sa)+
+  geom_sf(data = sa, fill = 'transparent') +
+  mapTheme()
+```
+
+### Fishnet
 
 ```{r}
 lville_fishnet2 <- lville_fishnet %>% 
@@ -225,7 +496,8 @@ ggplot() +
   scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
   facet_wrap(~ Event) +
   theme_minimal() +
-  labs(subtitle = "Note these are log-transformed")
+  labs(subtitle = "Note these are log-transformed") +
+  mapTheme()
 ```
 
 ### Census Variables
@@ -276,7 +548,58 @@ LV_Census_map <- ggplot() +
 LV_Census_map
 ```
 
+## Austin
 
+### Time Pattern for Trips
 
+By hour
 
+```{r}
+ggplot(dat_Aus_2019_june_start %>%
+         group_by(interval60) %>%
+         tally())+
+  geom_line(aes(x = interval60, y = n, group=1),size=.7)+
+  labs(title="Scooter trips per hr. Austin, June, 2019",
+       x="Date", 
+       y="Number of trips") +
+  plotTheme
+```
+
+By day of week
+
+```{r}
+# by day of week
+ggplot(data=dat_Aus_2019_june_start) +
+  geom_freqpoly(aes(Hour, col=`Day of Week`), binwidth=1) +
+  labs(title="Scooter trips in Austin by hour, by day of the week, June, 2019",
+       x="Hour", 
+       y="Trip Counts")+
+  scale_color_viridis_d(direction = -1,
+                      option = "D")+
+  plotTheme
+```
+
+### Turnover
+
+Counts
+
+```{r}
+ggplot(data=sctTov_austin_dow, aes(`Day of Week`, turnover_m, group=1))+
+  geom_line(size=1) +
+  labs(title="Turnover rate of scooter in Austin by day of the week, June, 2019",
+       x="Hour", 
+       y="Trip Counts")+
+  plotTheme
+```
+
+Rate
+
+```{r}
+ggplot(data=sctTov_austin_hour, aes(Hour, turnover, group=1))+
+  geom_line(size=1) +
+  labs(title="Turnover rate of scooter in Austin by day of the week, June, 2019",
+       x="Hour", 
+       y="Turnoverrate")+
+  plotTheme
+```
 
