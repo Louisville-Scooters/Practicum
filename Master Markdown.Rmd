@@ -12,15 +12,15 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+data_directory <- paste(stringr::str_remove(here::here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
+                              "/~data", 
+                              sep = "")
+
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE, cache.path = data_directory)
 tidycensus::census_api_key("3ef31f05bc4961d45eaa1d3e4787a9b4be486b9f", install = TRUE, overwrite = TRUE)
 
 setwd(here::here())
 options(scipen = 999)
-
-data_directory <- paste(stringr::str_remove(here::here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
-                              "/~data", 
-                              sep = "")
 ```
 
 # Admin
@@ -167,7 +167,7 @@ sa <- read_sf(sa_file) %>%
 
 ### Census
 
-```{r}
+```{r, results = "hide"}
 #census data
 LV_Census <- 
   get_acs(geography = "tract",
@@ -237,7 +237,7 @@ lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %
 
 ### Census
 
-```{r}
+```{r, results = "hide"}
 ASTCensus <- 
   get_acs(geography = "tract", 
           variables = census_vars, 
@@ -487,7 +487,9 @@ lville_fishnet2 <- lville_fishnet %>%
   mutate(pickups = lengths(st_intersects(., rebalance_pickups)),
          dropoffs = lengths(st_intersects(., rebalance_dropoffs))) %>% 
   gather(key = "Event", value = "Count", pickups:dropoffs)
+```
 
+```{r}
 ggplot() +
   # geom_sf(data = base_map_proj, fill = NA, color = "lightgray") +
   geom_sf(data = lville_fishnet2, 
