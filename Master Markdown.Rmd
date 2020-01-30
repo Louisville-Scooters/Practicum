@@ -1,0 +1,282 @@
+---
+title: "Scooters"
+author: "Yijia Liu, Xinyi Miao, Eugene Chong"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    theme: cosmo
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
+tidycensus::census_api_key("3ef31f05bc4961d45eaa1d3e4787a9b4be486b9f", install = TRUE, overwrite = TRUE)
+
+setwd(here::here())
+options(scipen = 999)
+
+data_directory <- paste(stringr::str_remove(here::here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
+                              "/~data", 
+                              sep = "")
+```
+
+# Admin
+
+Define functions, directories, color palettes, inputs, etc here.
+
+## Load packages
+
+```{r}
+library(sf)
+library(measurements)
+library(tidycensus)
+library(tidyverse)
+library(tmap)
+```
+
+## Standard projection
+
+```{r}
+proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+```
+
+## Color Palettes
+
+```{r}
+paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
+palette5 <- c("#25CB10", "#5AB60C", "#8FA108","#C48C04", "#FA7800")
+```
+
+# Read/Prep Data
+
+## Louisville
+
+### Status Changes
+
+```{r}
+rebalance_file <- paste(data_directory, 
+                        "/Louisville-MDS-Status-Changes-2019Dec17.csv",
+                        sep = "")
+
+rebalance_data <- read_csv(rebalance_file)
+```
+
+### Census
+
+```{r}
+#census data
+LV_Census <- 
+  get_acs(geography = "tract", 
+          variables = c("B01003_001", "B19013_001", 
+                        "B02001_002", "B08013_001",
+                        "B08012_001", "B08301_001", 
+                        "B08301_010", "B01002_001",
+                        "B08014_001", "B08014_002"), 
+          year = 2018, 
+          state = "KY", 
+          geometry = TRUE, 
+          county = c("Jefferson"),
+          output = "wide") %>%
+  rename(Total_Pop =  B01003_001E,
+         Med_Inc = B19013_001E,
+         Med_Age = B01002_001E,
+         White_Pop = B02001_002E,
+         Vehicle_own_pop = B08014_001E,
+         No_vehicle = B08014_002E,
+         Total_Travel_Time = B08013_001E,
+         Num_Commuters = B08012_001E,
+         Means_of_Transport_pop = B08301_001E,
+         Total_Public_Trans = B08301_010E) %>%
+  dplyr::select(Total_Pop, 
+                Med_Inc, 
+                White_Pop, 
+                Total_Travel_Time,
+                Means_of_Transport_pop, 
+                Total_Public_Trans,
+                Num_Commuters,
+                Med_Age,
+                Vehicle_own_pop,
+                No_vehicle,
+                GEOID, 
+                geometry) %>%
+  mutate(Percent_White = White_Pop / Total_Pop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         Percent_Taking_Public_Trans = Total_Public_Trans / Means_of_Transport_pop,
+         Percent_vehicle_available = 1 - No_vehicle / Vehicle_own_pop) %>% 
+  st_transform(proj)
+```
+
+
+### Base Map
+
+```{r, results = "hide"}
+base_map <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7baa9141a95_30.geojson")
+
+base_map_proj <- base_map %>% st_transform(proj)
+```
+
+### Fishnet
+
+1/10th of a square mile each
+
+```{r}
+boundary <- st_union(base_map_proj) %>% st_sf()
+
+cell_area <- conv_unit(0.5, from = "mi2", to = "ft2")
+cell_size <- (cell_area * (2/3^0.5)) ^ 0.5 # the "cellsize" parameter is the distance between the centroids of each hexagonal cell.
+
+lville_fishnet <- st_make_grid(boundary, cellsize = cell_size, square = FALSE) %>% 
+  st_sf() %>% 
+  mutate(fishnet_ID = row_number())
+```
+
+
+# Explore and Visualize Data
+
+## Louisville
+
+### Distribution of Scooter Status Change Activities
+
+```{r}
+activity_distro_plot <- rebalance_data %>% 
+  ggplot(aes(x = reason)) +
+  geom_bar(stat = "count", position = "identity") +
+  facet_wrap(~ type, scales = "free") +
+  coord_flip() +
+  labs(x = "Reason for Status Change",
+       y = "Count",
+       title = "Distribution of Scooter Status Change Activities")
+
+activity_distro_plot
+```
+
+### Geographic Distribution of Status Change Activities
+
+```{r}
+rebalance_data_sf <- st_as_sf(rebalance_data,
+                              wkt = "location", 
+                              crs = 4326)
+
+rebalance_data_sf_proj <- rebalance_data_sf %>% 
+  st_transform(proj)
+
+rebalance_only <- rebalance_data_sf_proj %>% 
+  filter(str_detect(reason, "rebalance"))
+rebalance_only <- rebalance_only[base_map_proj,] #intersect data
+```
+
+Scooters tend to be rebalanced from all over Louisville to the waterfront and Old Louisville.
+
+```{r}
+ggplot() +
+  geom_sf(data = base_map_proj, fill = NA, color = "lightgray") +
+  geom_sf(data = rebalance_only, 
+          aes(color = reason),
+          alpha = 0.1) +
+  facet_wrap(~ reason) +
+  theme_minimal()
+```
+
+
+```{r}
+rebalance_pickups <- rebalance_only %>% 
+  dplyr::select(reason) %>% 
+  filter(reason == "rebalance pick up")
+
+rebalance_dropoffs <- rebalance_only %>% 
+  dplyr::select(reason) %>% 
+  filter(reason == "rebalance drop off")
+```
+
+Rebalance Pickups
+
+```{r}
+tmap_mode("view")
+
+tm_shape(rebalance_pickups %>% sample_n(10000)) +
+  tm_dots(col = "red",
+          alpha = 0.2)
+```
+
+Rebalance Dropoffs
+
+```{r}
+tm_shape(rebalance_dropoffs %>% sample_n(10000)) +
+  tm_dots(col = "blue",
+          alpha = 0.2)
+```
+
+
+
+```{r}
+lville_fishnet2 <- lville_fishnet %>% 
+  mutate(pickups = lengths(st_intersects(., rebalance_pickups)),
+         dropoffs = lengths(st_intersects(., rebalance_dropoffs))) %>% 
+  gather(key = "Event", value = "Count", pickups:dropoffs)
+
+ggplot() +
+  # geom_sf(data = base_map_proj, fill = NA, color = "lightgray") +
+  geom_sf(data = lville_fishnet2, 
+          aes(fill = log(Count + 1)),
+          alpha = 1) +
+  scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
+  facet_wrap(~ Event) +
+  theme_minimal() +
+  labs(subtitle = "Note these are log-transformed")
+```
+
+### Census Variables
+
+* Percent White
+* Mean Commute Time
+* Percent Public Transit Riders
+* Percent with a Vehicle
+
+histograms
+
+```{r}
+LV_Census_2 <- LV_Census %>% 
+  mutate(Percent_White_quintile = ntile(Percent_White, 5),
+         Percent_Taking_Public_Trans_quintile = ntile(Percent_Taking_Public_Trans, 5),
+         Percent_vehicle_quintile = ntile(Percent_vehicle_available, 5)) %>%
+  dplyr::select(GEOID,
+                Percent_White,
+                Mean_Commute_Time,
+                Percent_Taking_Public_Trans,
+                Percent_vehicle_available,
+                Percent_White_quintile,
+                Percent_Taking_Public_Trans_quintile,
+                Percent_vehicle_quintile
+                ) %>%
+  gather(key = "variable",
+         value = "value",
+         Percent_White:Percent_vehicle_quintile)
+
+LV_Census_histogram <- LV_Census_2 %>% 
+  filter(!str_detect(variable, "quintile")) %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 50) +
+  facet_wrap(~ variable, 
+             scales = "free")
+
+LV_Census_histogram
+```
+
+maps by quintile
+```{r}
+LV_Census_map <- ggplot() +
+  geom_sf(data = LV_Census_2 %>% filter(str_detect(variable, "quintile")),
+          aes(fill = value)) +
+  scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
+  facet_wrap(~ variable, ncol = 1)
+
+LV_Census_map
+```
+
+
+
+
+
