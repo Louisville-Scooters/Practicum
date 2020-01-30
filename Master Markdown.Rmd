@@ -16,7 +16,7 @@ data_directory <- paste(stringr::str_remove(here::here(), "\\/Eugene\\/Eugene - 
                               "/~data", 
                               sep = "")
 
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE, cache.path = data_directory)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
 tidycensus::census_api_key("3ef31f05bc4961d45eaa1d3e4787a9b4be486b9f", install = TRUE, overwrite = TRUE)
 
 setwd(here::here())
@@ -38,6 +38,9 @@ library(tmap)
 library(lubridate)
 library(knitr)
 library(kableExtra)
+library(rgeos)
+library(raster)
+library(spatstat)
 ```
 
 ## Standard projection
@@ -91,14 +94,14 @@ mapTheme <- function(base_size = 12) {
 ```{r}
 census_df <- data.frame(vars =     c("B01003_001E", 
                                      "B19013_001E", 
-                                     "B02001_002E", 
+                                     "B01002_001E", 
+                                     "B02001_002E",
+                                     "B08014_001E",
+                                     "B08014_002E",
                                      "B08013_001E",
                                      "B08012_001E",
                                      "B08301_001E",
-                                     "B08301_010E",
-                                     "B01002_001E",
-                                     "B08014_001E",
-                                     "B08014_002E"),
+                                     "B08301_010E"),
                         
                         colNames = c("Total_Pop",
                                      "Med_Inc",
@@ -453,12 +456,52 @@ tm_shape(rebalance_pickups %>% sample_n(10000)) +
           alpha = 0.2)
 ```
 
+```{r}
+pickups_ppp <- as.ppp(st_coordinates(rebalance_pickups), W = st_bbox(lville_fishnet2))
+pickups_KD.1000 <- spatstat::density.ppp(pickups_ppp, 1000)
+pickups_KD.1500 <- spatstat::density.ppp(pickups_ppp, 1500)
+pickups_KD.2000 <- spatstat::density.ppp(pickups_ppp, 2000)
+pickups_KD.df <- rbind(
+  mutate(data.frame(rasterToPoints(mask(raster(pickups_KD.1000), as(lville_fishnet2, 'Spatial')))), Legend = "1000 Ft."),
+  mutate(data.frame(rasterToPoints(mask(raster(pickups_KD.1500), as(lville_fishnet2, 'Spatial')))), Legend = "1500 Ft."),
+  mutate(data.frame(rasterToPoints(mask(raster(pickups_KD.2000), as(lville_fishnet2, 'Spatial')))), Legend = "2000 Ft.")) 
+
+pickups_KD.df$Legend <- factor(pickups_KD.df$Legend, levels = c("1000 Ft.", "1500 Ft.", "2000 Ft."))
+
+ggplot(data=pickups_KD.df, aes(x=x, y=y)) +
+  geom_raster(aes(fill=layer)) + 
+  facet_wrap(~Legend) +
+  coord_sf(crs=st_crs(lville_fishnet2)) +
+  viridis::scale_fill_viridis() +
+  mapTheme()
+```
+
 Rebalance Dropoffs
 
 ```{r}
 tm_shape(rebalance_dropoffs %>% sample_n(10000)) +
   tm_dots(col = "blue",
           alpha = 0.2)
+```
+
+```{r}
+dropoffs_ppp <- as.ppp(st_coordinates(rebalance_dropoffs), W = st_bbox(lville_fishnet2))
+dropoffs_KD.1000 <- spatstat::density.ppp(dropoffs_ppp, 1000)
+dropoffs_KD.1500 <- spatstat::density.ppp(dropoffs_ppp, 1500)
+dropoffs_KD.2000 <- spatstat::density.ppp(dropoffs_ppp, 2000)
+dropoffs_KD.df <- rbind(
+  mutate(data.frame(rasterToPoints(mask(raster(dropoffs_KD.1000), as(lville_fishnet2, 'Spatial')))), Legend = "1000 Ft."),
+  mutate(data.frame(rasterToPoints(mask(raster(dropoffs_KD.1500), as(lville_fishnet2, 'Spatial')))), Legend = "1500 Ft."),
+  mutate(data.frame(rasterToPoints(mask(raster(dropoffs_KD.2000), as(lville_fishnet2, 'Spatial')))), Legend = "2000 Ft.")) 
+
+dropoffs_KD.df$Legend <- factor(dropoffs_KD.df$Legend, levels = c("1000 Ft.", "1500 Ft.", "2000 Ft."))
+
+ggplot(data=dropoffs_KD.df, aes(x=x, y=y)) +
+  geom_raster(aes(fill=layer)) + 
+  facet_wrap(~Legend) +
+  coord_sf(crs=st_crs(lville_fishnet2)) +
+  viridis::scale_fill_viridis() +
+  mapTheme()
 ```
 
 #### Trips in June 2019 Only
@@ -502,6 +545,35 @@ ggplot() +
   mapTheme()
 ```
 
+#### Flow Map
+
+Question:
+
+* How was the sort order for 
+
+```{r}
+# LV_Census_2 <- LV_Census %>% 
+#   mutate(centroid_X = st_coordinates(st_centroid(.))[, 1],
+#          centroid_Y = st_coordinates(st_centroid(.))[, 2]) %>% 
+#   dplyr::select(GEOID, centroid_X, centroid_Y)
+# 
+# users_start_tracts <- users_only %>% 
+#   filter(str_detect(reason, "pick up")) %>% 
+#   st_join(LV_Census %>% dplyr::select(GEOID), 
+#           st_within, 
+#           left = T) %>% 
+#   rename(Start.Census.Tract = GEOID) %>% 
+#   left_join(LV_Census_2, by = c("Start.Census.Tract" = "GEOID"))
+# 
+# users_end_tracts <- users_only %>% 
+#   filter(str_detect(reason, "drop off")) %>% 
+#   st_join(LV_Census_2 %>% dplyr::select(GEOID), 
+#           st_within, 
+#           left = T) %>% 
+#   rename(End.Census.Tract = GEOID)
+```
+
+
 ### Census Variables
 
 * Percent White
@@ -512,7 +584,7 @@ ggplot() +
 histograms
 
 ```{r}
-LV_Census_2 <- LV_Census %>% 
+LV_Census_3 <- LV_Census %>% 
   mutate(Percent_White_quintile = ntile(Percent_White, 5),
          Percent_Taking_Public_Trans_quintile = ntile(Percent_Taking_Public_Trans, 5),
          Percent_vehicle_quintile = ntile(Percent_vehicle_available, 5)) %>%
@@ -529,7 +601,7 @@ LV_Census_2 <- LV_Census %>%
          value = "value",
          Percent_White:Percent_vehicle_quintile)
 
-LV_Census_histogram <- LV_Census_2 %>% 
+LV_Census_histogram <- LV_Census_3 %>% 
   filter(!str_detect(variable, "quintile")) %>% 
   ggplot(aes(x = value)) +
   geom_histogram(bins = 50) +
@@ -540,12 +612,13 @@ LV_Census_histogram
 ```
 
 maps by quintile
-```{r}
+```{r, fig.height = 8, fig.width = 5}
 LV_Census_map <- ggplot() +
-  geom_sf(data = LV_Census_2 %>% filter(str_detect(variable, "quintile")),
+  geom_sf(data = LV_Census_3 %>% filter(str_detect(variable, "quintile")),
           aes(fill = value)) +
   scale_fill_continuous(high = "#132B43", low = "#56B1F7") +
-  facet_wrap(~ variable, ncol = 1)
+  facet_wrap(~ variable, ncol = 1) +
+  mapTheme()
 
 LV_Census_map
 ```
