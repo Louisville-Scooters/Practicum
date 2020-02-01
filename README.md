@@ -58,7 +58,8 @@
   * After we run it, we can save that object to our shared `~data/~RData` folder.
   ```r
   LV_rebal_sf_RDS <- file.path(data_directory, 
-                               # Below: 'Louisville' is the subfolder. 'LV_rebal_sf' is the object you're saving
+                               # Below: 'Louisville' is the subfolder. 
+                               # 'LV_rebal_sf' is the object you're saving
                                "~RData/Louisville/LV_rebal_sf") 
   
   saveRDS(LV_rebal_sf,
