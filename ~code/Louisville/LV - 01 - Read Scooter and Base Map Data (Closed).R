@@ -5,7 +5,7 @@
 # 3. Scooter rebalance data
 # 4. Scooter Open Data
 #
-# This makes no changes to the data.
+# This makes no changes to the raw data.
 ##########################################################################
 
 # Read in base map

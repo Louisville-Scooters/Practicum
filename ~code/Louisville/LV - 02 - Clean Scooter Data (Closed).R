@@ -29,7 +29,8 @@ LV_SA <- LV_SA_raw %>%
 #   st_transform(LV_proj) %>% 
 #   .[LV_SA,] # filter out any trips outside the service area
 
-LV_rebal_sf_RDS <- file.path(data_directory, "~RData/Louisville/LV_rebal_sf")
+LV_rebal_sf_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_rebal_sf")
 # 
 # saveRDS(LV_rebal_sf,
 #         file = LV_rebal_sf_RDS)
