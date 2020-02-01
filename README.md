@@ -45,7 +45,8 @@
 
 * Include the city at the beginning of each object name, e.g, `LV_rebal_sf`, not `rebal_sf`.
 * Save time-intensive objects to `~data/~RData`.
-  * For example: the below code to filter the LV rebalance data for the service area takes a long time.
+  * While workspace images are helpful, it means that other people cannot work on a file without re-running all the necessary code.
+  * For example: the below code from `LV - 02` filters the LV rebalance data for the service area. It takes a long time.
   ```r
   LV_rebal_sf <- st_as_sf(LV_rebal_raw,
                               wkt = "location",
@@ -53,13 +54,37 @@
     st_transform(LV_proj) %>%
     .[LV_SA,]
   ```
-  * After we run it, we can save that object to our shared `~Rdata` folder.
+  * After we run it, we can save that object to our shared `~data/~RData` folder.
   ```r
-  LV_rebal_sf_RDS <- file.path(data_directory, "~RData/Louisville/LV_rebal_sf")
+  LV_rebal_sf_RDS <- file.path(data_directory, 
+                               "~RData/Louisville/LV_rebal_sf") # 'LV_rebal_sf' should be the name of the object you're saving
   
   saveRDS(LV_rebal_sf,
           file = LV_rebal_sf_RDS)
-  ```        
+  ```
+  * Next time, someone can just read in the .rds file
+  ```r
+  LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
+  ```
+  * Here's how the code looks all together. If you need to change `LV_rebal_sf`, you can un-comment the code, and save a new version of the object
+  ```r
+  ### Make rebalance sf object ----
+  # Make the object with the code below ('ctrl + shift + c' to un-comment multiple lines at once)
+  
+  # LV_rebal_sf <- st_as_sf(LV_rebal_raw,
+  #                             wkt = "location",
+  #                             crs = 4326) %>% 
+  #   st_transform(LV_proj) %>% 
+  #   .[LV_SA,] # filter out any trips outside the service area
+  
+  LV_rebal_sf_RDS <- file.path(data_directory, "~RData/Louisville/LV_rebal_sf")
+  # 
+  # saveRDS(LV_rebal_sf,
+  #         file = LV_rebal_sf_RDS)
+  
+  # Read the saved object with the code below
+  LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
+  ```
 
 
 # Use Case:
