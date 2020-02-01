@@ -1,3 +1,15 @@
+##########################################################################
+# This script reads in:
+# 1. Creates and sets a computer-agnostic working directory
+# 2. Turns off scientific notation
+# 3. Loads necessary packages
+# 4. Sets themes and color palettes
+# 5. Writes helper functions
+#
+# Please update this whenever you create a function that everyone will need to use
+# or load a new package
+##########################################################################
+
 # Data Directory and Working Directory
 data_directory <- file.path(stringr::str_remove(here::here(), 
                                                 "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
@@ -20,9 +32,6 @@ library(kableExtra)
 library(rgeos)
 library(raster)
 library(spatstat)
-
-# Standard Projection
-proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 
 # Palettes and Themes
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
@@ -58,3 +67,5 @@ mapTheme <- function(base_size = 12) {
     panel.border = element_rect(colour = "black", fill=NA, size=2)
   )
 }
+
+# Helper functions
