@@ -1,19 +1,15 @@
 ##########################################################################
 # This script is for cleaning the LV scooter data
 # It:
-# 1. Names a projection to use for LV
-# 2. Re-projects the LV base map and service area in the new projection
-# 3. Re-projects the rebal and open scooter data.
-# 4. Filters out any rebal scooter data outside the service area
-# 5. Defines a function for creating LV scooter origin and destination sf objects, 
+# 1. Re-projects the LV base map and service area in the new projection
+# 2. Re-projects the rebal and open scooter data.
+# 3. Filters out any rebal scooter data outside the service area
+# 4. Defines a function for creating LV scooter origin and destination sf objects, 
 #    which can be linked via the 'TripID' column to the rest of the dataset ('LV_open_raw')
 #
 # This script exports the following data:
 # 1. LV_rebal_sf
 ##########################################################################
-
-# Set LV projection
-LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 
 # Project Base Map
 LV_base_map <- LV_base_map_raw %>% 
@@ -77,7 +73,7 @@ make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
   output
 }
 
-# Example of make_DC_sf() function
+# Example of make_LV_sf() function
 # LV_open_sf <- make_LV_open_sf(LV_open_raw[1:10,],
 #                               trip_end = "origins",
 #                               proj = LV_proj) %>%

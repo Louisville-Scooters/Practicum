@@ -33,6 +33,7 @@ library(rgeos)
 library(raster)
 library(spatstat)
 library(data.table)
+library(janitor)
 
 # Palettes and Themes
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
@@ -70,3 +71,8 @@ mapTheme <- function(base_size = 12) {
 }
 
 # Helper functions
+
+# Projections
+DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
+LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+KC_proj <- 2817 # https://spatialreference.org/ref/epsg/2817/
