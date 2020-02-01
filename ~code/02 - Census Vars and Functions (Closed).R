@@ -1,3 +1,10 @@
+##########################################################################
+# This script:
+# 1. Creates a list of census variables to collect for each city with standardized column names
+# 2. Defines a helper function for renaming columns after pulling census data
+##########################################################################
+
+# List of 2018 ACS variables: https://api.census.gov/data/2018/acs/acs5/variables.html
 census_df <- data.frame(vars =     c("B01003_001E", 
                                      "B19013_001E", 
                                      "B01002_001E", 
@@ -24,6 +31,7 @@ census_df <- data.frame(vars =     c("B01003_001E",
 census_vars <- census_df$vars
 census_colNames <- census_df$colNames
 
+# Function for renaming columns after collecting census data
 rename_census_cols <- function(x){
   
   output <- x %>% 
@@ -32,3 +40,14 @@ rename_census_cols <- function(x){
   
   output
 }
+
+# Example of rename_census_cols() function
+# ASTCensus <- 
+#   get_acs(geography = "tract", 
+#           variables = census_vars, 
+#           year = 2018, 
+#           state = "TX", 
+#           geometry = TRUE, 
+#           county = c("Travis"),
+#           output = "wide") %>%
+#   rename_census_cols()
