@@ -10,7 +10,7 @@
 # DC projection
 DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
 
-# Add helper columns
+# Add helper columns ----
 DC_scooter_data <- DC_scooter_data_raw %>% 
   mutate(# this is the start time from the original data. Some data includes the date, but others only have the time
     original_start_time = start_time,
@@ -22,7 +22,7 @@ DC_scooter_data <- DC_scooter_data_raw %>%
     end_date = str_extract(original_end_time, "[0-9]{1,2}\\/[0-9]{1,2}\\/[0-9]{1,2}"),
     end_time = str_extract(original_end_time, "[0-9]{1,2}:[0-9]{1,2}"))
 
-# Make sf objects
+# Make sf objects ----
 make_DC_sf <- function(x, # x should be 'DC_scooter_data'
                        trip_end, # define whether you want the origins or the destinations
                        proj) { # proj should be 'DC_proj'

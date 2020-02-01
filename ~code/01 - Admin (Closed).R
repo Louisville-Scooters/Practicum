@@ -1,7 +1,7 @@
 # Data Directory and Working Directory
-data_directory <- paste(stringr::str_remove(here::here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
-                        "/~data", 
-                        sep = "")
+data_directory <- file.path(stringr::str_remove(here::here(), 
+                                                "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
+                        "~data")
 
 setwd(here::here())
 
@@ -58,4 +58,3 @@ mapTheme <- function(base_size = 12) {
     panel.border = element_rect(colour = "black", fill=NA, size=2)
   )
 }
-
