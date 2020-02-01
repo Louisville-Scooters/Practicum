@@ -1,5 +1,3 @@
-# MUSA 800 Project Template
-
 # Project Name:
 
 
