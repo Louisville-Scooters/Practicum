@@ -7,6 +7,9 @@
 # 4. Filters out any rebal scooter data outside the service area
 # 5. Defines a function for creating LV scooter origin and destination sf objects, 
 #    which can be linked via the 'TripID' column to the rest of the dataset ('LV_open_raw')
+#
+# This script exports the following data:
+# 1. LV_rebal_sf
 ##########################################################################
 
 # Set LV projection
@@ -25,8 +28,11 @@ LV_SA <- LV_SA_raw %>%
 
 # LV_rebal_sf <- st_as_sf(LV_rebal_raw,
 #                             wkt = "location",
-#                             crs = 4326) %>% 
-#   st_transform(LV_proj) %>% 
+#                             crs = 4326) %>%
+#   st_transform(LV_proj) %>%
+#   mutate(operators = as.factor(operators),
+#          duration = 0, # initialize columns for for-loop
+#          energy_diff = 0) %>%
 #   .[LV_SA,] # filter out any trips outside the service area
 
 LV_rebal_sf_RDS <- file.path(data_directory, 

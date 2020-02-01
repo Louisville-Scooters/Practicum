@@ -32,6 +32,7 @@ library(kableExtra)
 library(rgeos)
 library(raster)
 library(spatstat)
+library(data.table)
 
 # Palettes and Themes
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
