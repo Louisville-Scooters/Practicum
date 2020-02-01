@@ -24,6 +24,7 @@
   * Sometimes this won't matter, like two different analysis tasks.
 * Separate tasks into separate scripts.
   * E.g., scripts for reading in raw data and for making visualizations should be different files.
+  * When in doubt, make a new script. Easier to combine several small scripts than separate one big one.
 * Specify whether a script is `Open` or `Closed` in the file name. 
   * **Open** means it is still being modified / it's OK for anyone to modify it.
   * **Closed** means that it's been "finalized", and you should let everyone know that you are making a change to it.
@@ -45,8 +46,8 @@
 
 * Include the city at the beginning of each object name, e.g, `LV_rebal_sf`, not `rebal_sf`.
 * Save time-intensive objects to `~data/~RData`.
-  * While workspace images are helpful, it means that other people cannot work on a file without re-running all the necessary code.
-  * For example: the below code from `LV - 02` filters the LV rebalance data for the service area. It takes a long time.
+  * While workspace images are helpful, other people cannot work on that object without re-running all the necessary code.
+  * **Example:** the below code from `LV - 02` filters the LV rebalance data for the service area. It takes a long time.
   ```r
   LV_rebal_sf <- st_as_sf(LV_rebal_raw,
                               wkt = "location",
@@ -57,7 +58,8 @@
   * After we run it, we can save that object to our shared `~data/~RData` folder.
   ```r
   LV_rebal_sf_RDS <- file.path(data_directory, 
-                               "~RData/Louisville/LV_rebal_sf") # 'LV_rebal_sf' should be the name of the object you're saving
+                               # Below: 'Louisville' is the subfolder. 'LV_rebal_sf' is the object you're saving
+                               "~RData/Louisville/LV_rebal_sf") 
   
   saveRDS(LV_rebal_sf,
           file = LV_rebal_sf_RDS)
@@ -85,7 +87,6 @@
   # Read the saved object with the code below
   LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
   ```
-
 
 # Use Case:
 
