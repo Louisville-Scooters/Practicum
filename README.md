@@ -26,16 +26,20 @@
 * Specify whether a script is `Open` or `Closed` in the file name. 
   * **Open** means it is still being modified / it's OK for anyone to modify it.
   * **Closed** means that it's been "finalized". If you need to make a change to it, let everyone know on Slack.
-* Include a summary at the top of each script.  For example, from `LV - 01 - Read Scooter and Base Map Data (Closed).R`:
+* Include a summary at the top of each script.  For example, from `LV - 02 - Clean Scooter Data (Closed).R`:
   ```
   ##########################################################################
-  # This script reads in:
-  # 1. Louisville base map
-  # 2. Scooter service area
-  # 3. Scooter rebalance data
-  # 4. Scooter Open Data
+  # This script is for cleaning the LV scooter data
+  # It:
+  # 1. Names a projection to use for LV
+  # 2. Re-projects the LV base map and service area in the new projection
+  # 3. Re-projects the rebal and open scooter data.
+  # 4. Filters out any rebal scooter data outside the service area
+  # 5. Defines a function for creating LV scooter origin and destination sf objects, 
+  #    which can be linked via the 'TripID' column to the rest of the dataset ('LV_open_raw')
   #
-  # This makes no changes to the raw data.
+  # This script exports the following data:
+  # 1. LV_rebal_sf
   ##########################################################################
   ```
 * Instead of deleting a script, move it into the `~code/~archive` folder
