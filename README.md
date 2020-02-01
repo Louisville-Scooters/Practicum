@@ -27,7 +27,7 @@
   * When in doubt, make a new script. Easier to combine several small scripts than separate one big one.
 * Specify whether a script is `Open` or `Closed` in the file name. 
   * **Open** means it is still being modified / it's OK for anyone to modify it.
-  * **Closed** means that it's been "finalized", and you should let everyone know that you are making a change to it.
+  * **Closed** means that it's been "finalized". If you need to make a change to it, let everyone know on Slack.
 * Include a summary at the top of each script.  For example, from `LV - 01 - Read Scooter and Base Map Data (Closed).R`:
   ```
   ##########################################################################
