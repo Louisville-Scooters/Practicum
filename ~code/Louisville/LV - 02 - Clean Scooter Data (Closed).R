@@ -26,7 +26,10 @@ LV_SA <- LV_SA_raw %>%
 #                             wkt = "location",
 #                             crs = 4326) %>%
 #   st_transform(LV_proj) %>%
-#   mutate(operators = as.factor(operators),
+#   mutate(operators = ifelse(operators == "Bolt Lousiville", # fix typo
+#                             "Bolt Louisville",
+#                             operators),
+#          operators = as.factor(operators),
 #          duration = 0, # initialize columns for for-loop
 #          energy_diff = 0) %>%
 #   .[LV_SA,] # filter out any trips outside the service area
@@ -40,7 +43,7 @@ LV_rebal_sf_RDS <- file.path(data_directory,
 # Read the saved object with the code below
 LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
 
-# Make open data sf objects
+# Make sf objects with open data ----
 make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
                             trip_end, # define whether you want the origins or the destinations
                             proj) { # proj should be 'LV_proj'
