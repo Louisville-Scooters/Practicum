@@ -83,3 +83,4 @@ mapTheme <- function(base_size = 12) {
 DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
 LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 KC_proj <- 2817 # https://spatialreference.org/ref/epsg/2817/
+MNP_proj <- 26849 #https://www.spatialreference.org/ref/epsg/26849/
