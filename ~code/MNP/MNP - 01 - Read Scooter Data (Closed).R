@@ -10,13 +10,11 @@
 MNP_directory <- paste(data_directory, 
                       "/MNP",
                       sep = "")
-
+MNP_directory
 # List of all scooter-related files
 MNP_scooter_trip_list <- list.files(path = MNP_directory, pattern = "*.csv", full.names = T)
 
 MNP_scooter_trip_list
-MNP_directory
-
 MNP_scooter_data_raw <- MNP_scooter_trip_list %>% 
   map_df(., 
          ~ read_csv(.,
