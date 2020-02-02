@@ -18,8 +18,9 @@
 ## Scripts
 
 * Naming convention: `[City] - [Number] - [What does it do?] ([Open/Closed]).R`
-* Number scripts in the order they should be run, e.g., `LV - 01 - Read Data.R` should come before `LV - 02 - Clean Data.R`.
+* Number scripts in the order they should be run, e.g., `LV - 01 - Read Scooter Data.R` should come before `LV - 02 - Clean Scooter Data.R`.
   * Sometimes this won't matter, like two different analysis tasks.
+  * If you're working on a new task that's very different, keep some cushion between the numbers. If there's an `LV - 01 - Read Scooter Data.R` and you're about to create a file for census data, call it `LV - 20 - Read Census Data.R`.
 * Separate tasks into separate scripts.
   * E.g., scripts for reading in raw data and for making visualizations should be different files.
   * When in doubt, make a new script. Easier to combine several small scripts than separate one big one.
