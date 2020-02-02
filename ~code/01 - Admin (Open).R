@@ -35,6 +35,13 @@ library(spatstat)
 library(data.table)
 library(janitor)
 library(vroom)
+library(here)
+library(dplyr)
+library(sp)
+library(viridis)
+library(maptools)
+library(stringr)
+
 
 # Palettes and Themes
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
