@@ -1,10 +1,9 @@
 ##########################################################################
 # This script is for preparing the LV rebalance data for analyzing the user-only records
 # It:
-# 1. Filters for only the user records
+# 1. Filters for only the rebalance records
 # 2. Arranges by vehicleId and occurredAt so each row is in sequence of action for each vehicle
-# 3. Creates a helper function for calculating the duration and energy usage of each trip
-# 4. Creates a helper function for turning row-pairs (i.e., a pickup and dropoff row) into a single row
+# 3. Use the same functions in LV-03 to calculate energy difference, trip duration and turn row pairs into a single row
 #
 # This script exports the following data:
 # 1. LV_rebal_reb_only_combined_rowPairs - origin-destination rows for all rebalance records in the rebalance data
