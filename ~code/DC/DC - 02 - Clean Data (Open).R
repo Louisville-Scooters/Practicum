@@ -1,14 +1,10 @@
 ##########################################################################
 # This script is for cleaning the DC scooter data
 # It:
-# 1. Names a projection to use for DC
-# 2. Adds some helper columns: company, start and end dates and times
-# 3. Defines a function for creating DC scooter origin and destination sf objects, which can be linked via the 'trip_id' column to the rest of the dataset
+# 1. Adds some helper columns: company, start and end dates and times
+# 2. Defines a function for creating DC scooter origin and destination sf objects, which can be linked via the 'trip_id' column to the rest of the dataset
 #    The DC scooter data should be filtered to fewer rows before running this function, as the objects would be massive
 ##########################################################################
-
-# DC projection
-DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
 
 # Add helper columns ----
 DC_scooter_data <- DC_scooter_data_raw %>% 

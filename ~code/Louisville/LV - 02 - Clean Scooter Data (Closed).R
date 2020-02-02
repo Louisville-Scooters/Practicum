@@ -1,16 +1,15 @@
 ##########################################################################
 # This script is for cleaning the LV scooter data
 # It:
-# 1. Names a projection to use for LV
-# 2. Re-projects the LV base map and service area in the new projection
-# 3. Re-projects the rebal and open scooter data.
-# 4. Filters out any rebal scooter data outside the service area
-# 5. Defines a function for creating LV scooter origin and destination sf objects, 
+# 1. Re-projects the LV base map and service area in the new projection
+# 2. Re-projects the rebal and open scooter data.
+# 3. Filters out any rebal scooter data outside the service area
+# 4. Defines a function for creating LV scooter origin and destination sf objects, 
 #    which can be linked via the 'TripID' column to the rest of the dataset ('LV_open_raw')
+#
+# This script exports the following data:
+# 1. LV_rebal_sf
 ##########################################################################
-
-# Set LV projection
-LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 
 # Project Base Map
 LV_base_map <- LV_base_map_raw %>% 
@@ -25,8 +24,14 @@ LV_SA <- LV_SA_raw %>%
 
 # LV_rebal_sf <- st_as_sf(LV_rebal_raw,
 #                             wkt = "location",
-#                             crs = 4326) %>% 
-#   st_transform(LV_proj) %>% 
+#                             crs = 4326) %>%
+#   st_transform(LV_proj) %>%
+#   mutate(operators = ifelse(operators == "Bolt Lousiville", # fix typo
+#                             "Bolt Louisville",
+#                             operators),
+#          operators = as.factor(operators),
+#          duration = 0, # initialize columns for for-loop
+#          energy_diff = 0) %>%
 #   .[LV_SA,] # filter out any trips outside the service area
 
 LV_rebal_sf_RDS <- file.path(data_directory, 
@@ -38,7 +43,7 @@ LV_rebal_sf_RDS <- file.path(data_directory,
 # Read the saved object with the code below
 LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
 
-# Make open data sf objects
+# Make sf objects with open data ----
 make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
                             trip_end, # define whether you want the origins or the destinations
                             proj) { # proj should be 'LV_proj'
@@ -71,7 +76,7 @@ make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
   output
 }
 
-# Example of make_DC_sf() function
+# Example of make_LV_sf() function
 # LV_open_sf <- make_LV_open_sf(LV_open_raw[1:10,],
 #                               trip_end = "origins",
 #                               proj = LV_proj) %>%
