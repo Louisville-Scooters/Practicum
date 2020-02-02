@@ -1,5 +1,7 @@
 ##########################################################################
-# This script is for reading in the MNP scooter data.
+# This script is for reading in the 
+# 1. MNP scooter data.
+# 2. MNP street centerline shapefile
 
 
 ##########################################################################
@@ -27,3 +29,10 @@ MNP_scooter_data_raw$endtime <- as_datetime(MNP_scooter_data_raw$endtime)
 
 MNP_scooter_data_raw <- MNP_scooter_data_raw %>%
   dplyr::select(-objectid)
+
+# Read street centerline shapefile
+MNP_ST_file <- file.path(MNP_directory,
+                         "PW_Street_Centerline/PW_Street_Centerline.shp")
+
+MNP_street <- st_read(MNP_ST_file) %>%
+  st_transform(MNP_proj)
