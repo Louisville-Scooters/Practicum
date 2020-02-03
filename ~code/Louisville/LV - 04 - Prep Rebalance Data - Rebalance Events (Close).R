@@ -14,10 +14,6 @@ LV_rebal_rebalance_only <- LV_rebal_sf %>%
   filter(str_detect(reason, "rebalance"))%>% 
   arrange(vehicleId, occurredAt) # sort by vehicle ID and time
 
-# June 2019 ----
-LV_rebal_rebalance_only_0619 <- LV_rebal_rebalance_only %>%
-  filter(year(occurredAt) == 2019, month(occurredAt) == 6)
-
 # Trim the dataset to be "pick-up; drop-off" format b/c sometimes there is [reb pick up, reb pick up, reb drop off]
 LV_reb_ID_list <- c()
 for (veh in unique(LV_rebal_rebalance_only$vehicleId)) {
@@ -64,6 +60,12 @@ ggplot(LV_rebal_reb_only_combined_rowPairs, aes(duration))+
   xlim(0, 5000) +
   ylim(0, 500)
 
+
+# June 2019 ----
+LV_rebal_reb_only_0619_combined_rowPairs  <- LV_rebal_reb_only_combined_rowPairs %>%
+  filter(year(start_time) == 2019) %>%
+  filter(month(start_time) == 6 |month(end_time) == 6)
+
 # Save & Load
 LV_rebal_reb_only_combined_rowPairs_RDS <- file.path(data_directory, 
                                                       "~RData/Louisville/LV_rebal_reb_only_combined_rowPairs")
@@ -71,10 +73,10 @@ LV_rebal_reb_only_combined_rowPairs_RDS <- file.path(data_directory,
 LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
                                                      "~RData/Louisville/LV_rebal_reb_only_0619_combined_rowPairs")
 
-#saveRDS(LV_rebal_reb_only_0619_combined_rowPairs,
+# saveRDS(LV_rebal_reb_only_0619_combined_rowPairs,
 #                 file = LV_rebal_reb_only_0619_combined_rowPairs_RDS)
- saveRDS(LV_rebal_reb_only_combined_rowPairs,
-         file = LV_rebal_reb_only_combined_rowPairs_RDS)
+# saveRDS(LV_rebal_reb_only_combined_rowPairs,
+#         file = LV_rebal_reb_only_combined_rowPairs_RDS)
 
 # Read the saved object with the code below
 LV_rebal_reb_only_combined_rowPairs <- readRDS(LV_rebal_reb_only_combined_rowPairs_RDS)
