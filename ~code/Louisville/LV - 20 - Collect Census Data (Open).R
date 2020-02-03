@@ -24,3 +24,12 @@ LV_Census_raw <- get_acs(geography = "tract",
                 geometry,
                 census_colNames) %>% 
   st_transform(LV_proj)
+
+LV_Census_geoinfo <- LV_Census_raw %>%
+  select(GEOID,geometry) %>%
+  st_intersection(LV_SA %>% select(geometry))
+
+# extract centroid of each census tract
+LV_Census_geoinfo <- LV_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(LV_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(LV_Census_geoinfo))[, 2])
