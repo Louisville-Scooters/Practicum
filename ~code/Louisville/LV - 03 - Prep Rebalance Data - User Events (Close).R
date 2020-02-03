@@ -30,7 +30,7 @@ calc_tripDuration_and_energy <- function(x) {
       if (i%%2 == 1) { # if this is an odd number row
         
         # the trip duration is the time for the next row minus the time for this row
-        this_vehicle_set$duration[i] <- this_vehicle_set$occurredAt[i+1]- this_vehicle_set$occurredAt[i]
+        this_vehicle_set$duration[i] <- difftime(this_vehicle_set$occurredAt[i+1], this_vehicle_set$occurredAt[i], units = 'mins')
         
         # same with energy level
         this_vehicle_set$energy_diff[i] <- this_vehicle_set$vehicleEnergyLevel[i+1]- this_vehicle_set$vehicleEnergyLevel[i] 
