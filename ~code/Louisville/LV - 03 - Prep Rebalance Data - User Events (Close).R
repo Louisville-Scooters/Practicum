@@ -86,8 +86,12 @@ LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
   filter(year(occurredAt) == 2019, month(occurredAt) == 6) 
 
 LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>% 
-  calc_tripDuration_and_energy() %>% 
+  calc_tripDuration_and_energy()
+
+LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>% 
   combine_rowPairs()
+
+hist(LV_rebal_user_only_0619_combined_rowPairs$duration)
 
 # All user data ----
 # LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>% 

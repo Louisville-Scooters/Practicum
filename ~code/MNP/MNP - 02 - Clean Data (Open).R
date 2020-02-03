@@ -18,10 +18,21 @@ MNP_street_sf <- MNP_street %>%
   dplyr::select(NUM_WALKS, GBSID, BIKE_LANE, TRAFFIC_DI, SPEED_LIM, BUS_ROUTE, SNOW_EMERG, SEGMENT_LE, ROUTE_TYPE,
                 OFT, STREET_TYP, geometry)
 
+MNP_street_sf$GBSID <- as.character(MNP_street_sf$GBSID)
+
+MNP_street_unique <- MNP_street_sf[!duplicated(MNP_street_sf$GBSID),]
+
+MNP_street_unique <- MNP_street_unique %>%
+  mutate(centroid_X = st_coordinates(st_centroid(MNP_street_unique))[,1],
+         centroid_Y = st_coordinates(st_centroid(MNP_street_unique))[, 2])
+
+MNP_street_centroid <- st_as_sf(MNP_street_unique %>% st_set_geometry(NULL), coords = c('centroid_X', 'centroid_Y'), crs = 26849)
+
 # Keep 2019 June data only
 MNP_scooter_0619 <- MNP_scooter_data %>%
   filter(dataset == "/Motorized_Foot_Scooter_Trips_June_2019")
 
 # Join geographical information based on street centerline
-MNP_scooter_0619_sf <- merge(MNP_scooter_0619, MNP_street_sf, by.x = 'startcenterlineid', by.y = 'GBSID', all.x = TRUE)
+MNP_scooter_0619_sf <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
+
 
