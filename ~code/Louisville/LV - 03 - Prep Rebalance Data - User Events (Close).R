@@ -91,7 +91,10 @@ LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>%
 LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>% 
   combine_rowPairs()
 
-hist(LV_rebal_user_only_0619_combined_rowPairs$duration)
+ggplot(LV_rebal_user_only_0619_combined_rowPairs, aes(duration))+
+  geom_histogram() +
+  xlim(0, 5000) +
+  ylim(0, 250)
 
 # All user data ----
 # LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>% 
@@ -104,5 +107,12 @@ LV_rebal_user_only_combined_rowPairs_RDS <- file.path(data_directory,
 # saveRDS(LV_rebal_user_only_combined_rowPairs,
 #         file = LV_rebal_user_only_combined_rowPairs_RDS)
 
+LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_0619_combined_rowPairs,
+#         file = LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
 # Read the saved object with the code below
 LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowPairs_RDS)
+LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
