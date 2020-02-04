@@ -15,7 +15,7 @@
 # rebalancing data####
 # structured rebalance data (i.e. LV_reb_0619 here) could be obtained by running code 01 from Ophelia.
 # obtain fields about longitude and latitude.
-LV_reb_0619[c("lon_s", "lat_s")] <- do.call(rbind, 
+LV_rebal_reb_only_combined_rowPairs[c("lon_s", "lat_s")] <- do.call(rbind, 
                                            lapply(strsplit(LV_reb_0619$trip_origin, "[()]"), 
                                                   function(col) {   
                                                     (parts <- unlist(strsplit(col[2], " ")))
@@ -120,7 +120,7 @@ study.panel$cnt_out <- study.panel$cnt_out %>% replace_na(0)
 
 study.panel$diff <- study.panel$OI - study.panel$cnt_out
 
-### opportunity index by month
+### weekly opportunity index in June
 LV_OI_bymonth <- study.panel %>%
   group_by(End.Census.Tract) %>%
   summarise(mean_OI = mean(OI), mean_out = mean(cnt_out))
