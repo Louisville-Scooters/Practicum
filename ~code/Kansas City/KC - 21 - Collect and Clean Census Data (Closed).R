@@ -61,7 +61,7 @@ KC_Census <- KC_Census_raw %>%
          pOccupied = Occupied/Total_occupancy,
          pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
 
-# names(KU_Census)
+# names(KC_Census)
 
 KC_Census <- KC_Census %>%
   dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
