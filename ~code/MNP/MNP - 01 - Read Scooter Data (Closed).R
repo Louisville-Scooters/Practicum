@@ -36,3 +36,12 @@ MNP_ST_file <- file.path(MNP_directory,
 
 MNP_street <- st_read(MNP_ST_file) %>%
   st_transform(MNP_proj)
+
+# Read city boundary shapefile 
+MNP_ct_file <- file.path(MNP_directory,
+                         "MNP_CityLimits/msvcGIS_MinneapolisCityLimits.shp")
+
+MNP_ct <- st_read(MNP_ct_file) %>%
+  st_transform(MNP_proj)
+
+ggplot(MNP_ct) + geom_sf()
