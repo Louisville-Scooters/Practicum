@@ -1660,6 +1660,28 @@ mapTheme &lt;- function(base_size = 12) {
   )
 }</code></pre>
 </div>
+<div id="helper-functions" class="section level2">
+<h2>Helper Functions</h2>
+<pre class="r"><code>qBr &lt;- function(df, variable, rnd) {
+  if (missing(rnd)) {
+    as.character(quantile(round(df[[variable]],0),
+                          c(.01,.2,.4,.6,.8), na.rm=T))
+  } else if (rnd == FALSE | rnd == F) {
+    as.character(formatC(quantile(df[[variable]]), digits = 3),
+                 c(.01,.2,.4,.6,.8), na.rm=T)
+  }
+}
+
+q5 &lt;- function(variable) {as.factor(ntile(variable, 5))}</code></pre>
+</div>
+<div id="projections" class="section level2">
+<h2>Projections</h2>
+<pre class="r"><code>DC_proj &lt;- 2283 # Northern Virginia: https://epsg.io/2283
+LV_proj &lt;- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+KC_proj &lt;-2817 # https://spatialreference.org/ref/epsg/2817/
+MNP_proj &lt;- 26849 #https://www.spatialreference.org/ref/epsg/26849/
+AU_proj &lt;- 2246 </code></pre>
+</div>
 </div>
 
 

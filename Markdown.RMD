@@ -28,6 +28,7 @@ options(scipen = 999)
 Define functions, directories, color palettes, inputs, etc here.
 
 ## Load packages
+
 ```{r, cache = TRUE}
 library(sf)
 library(measurements)
@@ -78,4 +79,30 @@ mapTheme <- function(base_size = 12) {
     panel.border = element_rect(colour = "black", fill=NA, size=2)
   )
 }
+```
+
+## Helper Functions
+
+```{r, cache = TRUE}
+qBr <- function(df, variable, rnd) {
+  if (missing(rnd)) {
+    as.character(quantile(round(df[[variable]],0),
+                          c(.01,.2,.4,.6,.8), na.rm=T))
+  } else if (rnd == FALSE | rnd == F) {
+    as.character(formatC(quantile(df[[variable]]), digits = 3),
+                 c(.01,.2,.4,.6,.8), na.rm=T)
+  }
+}
+
+q5 <- function(variable) {as.factor(ntile(variable, 5))}
+```
+
+## Projections
+
+```{r, cache = TRUE}
+DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
+LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+KC_proj <-2817 # https://spatialreference.org/ref/epsg/2817/
+MNP_proj <- 26849 #https://www.spatialreference.org/ref/epsg/26849/
+AU_proj <- 2246 
 ```
