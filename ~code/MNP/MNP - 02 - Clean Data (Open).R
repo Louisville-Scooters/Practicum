@@ -35,4 +35,8 @@ MNP_scooter_0619 <- MNP_scooter_data %>%
 # Join geographical information based on street centerline
 MNP_scooter_0619_sf <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
 
+MNP_scooter_0619_sf <- st_as_sf(MNP_scooter_0619_sf, crs = MNP_proj)
 
+#still cannot join endcenterline id
+MNP_scooter_0619_final <- merge(MNP_scooter_0619_sf, MNP_street_centroid %>% dplyr::select(GBSID, geometry), by.x = 'endcenterlineid', by.y = 'GBSID')
+names(MNP_scooter_0619_sf)

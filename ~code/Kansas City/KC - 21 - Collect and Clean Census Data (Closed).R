@@ -67,3 +67,11 @@ KC_Census <- KC_Census %>%
   dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
                 pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
 
+KC_tract_list <- KC_Census_geoinfo$GEOID
+
+KC_Census_ct <- KC_Census %>%
+  filter(KC_Census$GEOID %in% KC_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor
+KC_Census_ct <- merge(KC_Census_geoinfo, KC_Census_ct, by = 'GEOID')
