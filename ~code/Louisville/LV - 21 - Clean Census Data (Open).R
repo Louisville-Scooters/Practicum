@@ -7,6 +7,7 @@
 ##########################################################################
 
 LV_Census <- LV_Census_raw %>% 
+  st_transform(LV_proj) %>% 
   mutate(pWhite = White_Pop / TotPop,
          Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
          pTrans = Total_Public_Trans / Means_of_Transport_pop,
