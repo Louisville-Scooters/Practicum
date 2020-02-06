@@ -51,3 +51,12 @@ AU_Census <- AU_Census_raw %>%
 AU_Census <- AU_Census %>%
   dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
                 pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+AU_tract_list <- AU_Census_geoinfo$GEOID
+
+AU_Census_ct <- AU_Census %>%
+  filter(AU_Census$GEOID %in% AU_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+AU_Census_ct <- merge(AU_Census_geoinfo, AU_Census_ct, by = 'GEOID')
