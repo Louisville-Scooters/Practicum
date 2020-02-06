@@ -20,6 +20,9 @@ setwd(here::here())
 # Scientific Notation
 options(scipen = 999)
 
+# For flow map
+options(repos = c(CRAN = "http://www.stats.bris.ac.uk/R/"))
+
 # Load Packages
 library(sf)
 library(measurements)
