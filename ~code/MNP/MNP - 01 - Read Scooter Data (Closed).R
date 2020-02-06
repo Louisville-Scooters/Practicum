@@ -41,7 +41,7 @@ MNP_street <- st_read(MNP_ST_file) %>%
 MNP_TR_file <- file.path(MNP_directory,
                          "Pedestrian_and_Bicycle_Trails/Pedestrian_and_Bicycle_Trails.shp")
 
-MNP_TR_file <- st_read(MNP_TR_file) %>%
+MNP_Trail <- st_read(MNP_TR_file) %>%
   st_transform(MNP_proj)
 
 # Read city boundary shapefile 
