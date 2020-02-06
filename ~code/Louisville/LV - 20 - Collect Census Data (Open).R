@@ -33,4 +33,3 @@ LV_Census_geoinfo <- LV_Census_raw %>%
 LV_Census_geoinfo <- LV_Census_geoinfo %>% 
   mutate(centroid_X = st_coordinates(st_centroid(LV_Census_geoinfo))[, 1],
          centroid_Y = st_coordinates(st_centroid(LV_Census_geoinfo))[, 2])
-

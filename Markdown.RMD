@@ -17,7 +17,11 @@ data_directory <- file.path(stringr::str_remove(here::here(),
                         "~data")
 
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-tidycensus::census_api_key("3ef31f05bc4961d45eaa1d3e4787a9b4be486b9f", install = TRUE, overwrite = TRUE)
+
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
 
 setwd(here::here())
 options(scipen = 999)
@@ -28,6 +32,8 @@ options(scipen = 999)
 Define functions, directories, color palettes, inputs, etc here.
 
 ## Load packages
+
+_List all packages here and include what we use them for._
 
 ```{r, cache = TRUE}
 library(sf)
@@ -41,9 +47,21 @@ library(kableExtra)
 library(rgeos)
 library(raster)
 library(spatstat)
+library(data.table)
+library(janitor)
+library(vroom)
+library(here)
+library(dplyr)
+library(sp)
+library(viridis)
+library(maptools)
+library(stringr)
+library(grid)
+library(gridExtra)
 ```
 
 ## Themes and Color Palettes
+
 ```{r, cache = TRUE}
 # Palettes and Themes
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
@@ -83,6 +101,10 @@ mapTheme <- function(base_size = 12) {
 
 ## Helper Functions
 
+* **qBr():** Find quintile breaks.
+* **q5():** Find quintile breaks and set as factor.
+* **rename_census_cols():** Rename census columns from ACS codes to variable names.
+
 ```{r, cache = TRUE}
 qBr <- function(df, variable, rnd) {
   if (missing(rnd)) {
@@ -95,9 +117,22 @@ qBr <- function(df, variable, rnd) {
 }
 
 q5 <- function(variable) {as.factor(ntile(variable, 5))}
+
+rename_census_cols <- function(x){
+  
+  output <- x %>% 
+    rename_at(vars(census_vars), 
+              ~ census_colNames)
+  
+  output
+}
 ```
 
 ## Projections
+
+List of projections to use for each city.
+
+* Should we update MNP to a state plane?
 
 ```{r, cache = TRUE}
 DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
@@ -105,4 +140,760 @@ LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 KC_proj <-2817 # https://spatialreference.org/ref/epsg/2817/
 MNP_proj <- 26849 #https://www.spatialreference.org/ref/epsg/26849/
 AU_proj <- 2246 
+```
+
+## Census Variables
+
+List of ACS variables we will collect for each city.
+
+```{r, cache = TRUE}
+census_df <- data.frame(vars =     c("B01003_001E", 
+                                     "B01001_026E",
+                                     "B00002_001E",
+                                     "B19013_001E", 
+                                     "B01002_001E", 
+                                     "B02001_002E",
+                                     "B08014_001E",
+                                     "B08014_002E",
+                                     "B08013_001E",
+                                     "B08012_001E",
+                                     "B08012_008E",
+                                     "B08012_009E",
+                                     "B08012_010E",
+                                     "B08012_011E",
+                                     "B08012_012E",
+                                     "B08012_013E",
+                                     "B08301_001E",
+                                     "B08301_002E",
+                                     "B08301_010E",
+                                     "B25002_001E",
+                                     "B25002_002E",
+                                     "B25077_001E",
+                                     "B25064_001E"),
+                        
+                        colNames = c("TotPop",
+                                     "TotFemale",
+                                     "TotHseUni",
+                                     "MdHHInc",
+                                     "MdAge",
+                                     "White_Pop",
+                                     "Vehicle_own_pop",
+                                     "No_vehicle",
+                                     "Total_Travel_Time",
+                                     "Travel_Time_3034",
+                                     "Travel_Time_3539",
+                                     "Travel_Time_4044",
+                                     "Travel_Time_4559",
+                                     "Travel_Time_6089",
+                                     "Travel_Time_90plus",
+                                     "Num_Commuters",
+                                     "Means_of_Transport_pop",
+                                     "Total_cartruckvan",
+                                     "Total_Public_Trans",
+                                     "Total_occupancy",
+                                     "Occupied",
+                                     "MedValue",
+                                     "MedRent"),
+                        stringsAsFactors = FALSE)
+
+census_vars <- census_df$vars
+census_colNames <- census_df$colNames
+```
+
+# Louisville
+
+## Read Data
+
+Read in:
+
+* **Louisville Base Map**
+* **Louisville Scooter Service Area**
+* **Scooter Datasets:**
+  + Dockless Trips Open Data: User ride data listed on Louisville's Open Data site.
+  + Status Changes (Rebalance): Data from the scooter companies that (should) include the user ride data listed on the Open Data site plus any rebalancing or maintenance operations done on the scooters.
+* **Census Information**
+  
+```{r, cache = TRUE, results = "hide"}
+# Read in base map
+LV_base_map_raw <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7baa9141a95_30.geojson")
+
+# Read in service area
+LV_SA_file <- file.path(data_directory,
+                        "Dockless Vehicle Service Area/Dockless_Vehicle_Service_Area.shp")
+
+LV_SA_raw <- st_read(LV_SA_file)
+
+# Read open data
+LV_open_raw <- read_csv("https://data.louisvilleky.gov/sites/default/files/DocklessTripOpenData_9.csv")
+
+# Read rebalance data
+LV_rebal_file <- file.path(data_directory, 
+                           "/Louisville-MDS-Status-Changes-2019Dec17.csv")
+
+LV_rebal_raw <- read_csv(LV_rebal_file)
+
+# Census info
+LV_Census_raw <- get_acs(geography = "tract", 
+                     variables = census_vars, 
+                     year = 2018, 
+                     state = "KY", 
+                     geometry = TRUE, 
+                     county = c("Jefferson"),
+                     output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(LV_proj)
+```
+
+## Clean Data
+
+* Project data
+* Rebalance Data
+  + Make _sf_ object
+  + Correct typos
+  + Initialize `operators` and `duration` columns
+  + Filter for service area
+* Open Data: Define helper function for making _sf_ objects with either the trip start or trip end
+* Census
+  + Make census columns
+  + Extract centroids
+
+```{r, cache = TRUE, echo = FALSE}
+# Project Base Map
+LV_base_map <- LV_base_map_raw %>% 
+  st_transform(LV_proj)
+
+# Project Service Area Map
+LV_SA <- LV_SA_raw %>% 
+  st_transform(LV_proj)
+
+### Make rebalance sf object ----
+# Make the object with the code below ('ctrl + shift + c' to un-comment multiple lines at once)
+
+# LV_rebal_sf <- st_as_sf(LV_rebal_raw,
+#                             wkt = "location",
+#                             crs = 4326) %>%
+#   st_transform(LV_proj) %>%
+#   mutate(operators = ifelse(operators == "Bolt Lousiville", # fix typo
+#                             "Bolt Louisville",
+#                             operators),
+#          operators = as.factor(operators),
+#          duration = 0, # initialize columns for for-loop
+#          energy_diff = 0) %>%
+#   .[LV_SA,] # filter out any trips outside the service area
+
+LV_rebal_sf_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_rebal_sf")
+# 
+# saveRDS(LV_rebal_sf,
+#         file = LV_rebal_sf_RDS)
+
+# Read the saved object with the code below
+LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
+
+# Make sf objects with open data ----
+make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
+                            trip_end, # define whether you want the origins or the destinations
+                            proj) { # proj should be 'LV_proj'
+  
+  if(!grepl("ori|des", trip_end)) {
+    
+    stop("trip_end must be either 'origins' or 'dests'")
+    
+  } else if (grepl("ori", trip_end)) {
+    
+    output <- x %>%
+      dplyr::select(TripID,
+                    StartLatitude,   
+                    StartLongitude) %>% 
+      st_as_sf(coords = c("StartLongitude", "StartLatitude"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  } else {
+    
+    output <- x %>%
+      dplyr::select(TripID,
+                    EndLatitude,   
+                    EndLongitude) %>% 
+      st_as_sf(coords = c("EndLongitude", "EndLatitude"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  }
+  output
+}
+
+# Census
+LV_Census <- LV_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(LV_Census)
+
+LV_Census <- LV_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+# Trim to service area
+LV_Census_geoinfo <- LV_Census_raw %>%
+  dplyr::select(GEOID, geometry) %>%
+  st_intersection(LV_SA %>% dplyr::select(geometry))
+
+# extract centroid of each census tract
+LV_Census_geoinfo <- LV_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(LV_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(LV_Census_geoinfo))[, 2])
+
+LV_tract_list <- LV_Census_geoinfo$GEOID
+
+LV_Census_ct <- LV_Census %>%
+  filter(LV_Census$GEOID %in% LV_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry info from LV_Census_geoinfo
+LV_Census_ct <- merge(LV_Census_geoinfo, LV_Census_ct, by = 'GEOID')
+```
+
+```{r, eval = FALSE}
+# Project Base Map
+LV_base_map <- LV_base_map_raw %>% 
+  st_transform(LV_proj)
+
+# Project Service Area Map
+LV_SA <- LV_SA_raw %>% 
+  st_transform(LV_proj)
+
+### Make rebalance sf object ----
+# Make the object with the code below ('ctrl + shift + c' to un-comment multiple lines at once)
+
+LV_rebal_sf <- st_as_sf(LV_rebal_raw,
+                            wkt = "location",
+                            crs = 4326) %>%
+  st_transform(LV_proj) %>%
+  mutate(operators = ifelse(operators == "Bolt Lousiville", # fix typo
+                            "Bolt Louisville",
+                            operators),
+         operators = as.factor(operators),
+         duration = 0, # initialize columns for for-loop
+         energy_diff = 0) %>%
+  .[LV_SA,] # filter out any trips outside the service area
+
+LV_rebal_sf_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_rebal_sf")
+# 
+# saveRDS(LV_rebal_sf,
+#         file = LV_rebal_sf_RDS)
+
+# Read the saved object with the code below
+# LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
+
+# Make sf objects with open data ----
+make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
+                            trip_end, # define whether you want the origins or the destinations
+                            proj) { # proj should be 'LV_proj'
+  
+  if(!grepl("ori|des", trip_end)) {
+    
+    stop("trip_end must be either 'origins' or 'dests'")
+    
+  } else if (grepl("ori", trip_end)) {
+    
+    output <- x %>%
+      dplyr::select(TripID,
+                    StartLatitude,   
+                    StartLongitude) %>% 
+      st_as_sf(coords = c("StartLongitude", "StartLatitude"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  } else {
+    
+    output <- x %>%
+      dplyr::select(TripID,
+                    EndLatitude,   
+                    EndLongitude) %>% 
+      st_as_sf(coords = c("EndLongitude", "EndLatitude"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  }
+  output
+}
+```
+
+## Rebalance Data
+
+Each row is a trip end. _E.g._ one row is a pickup at a certain location, and the next row is the dropoff, though the data is not always so clean.
+
+### User Events
+
+* Limit data to "user" events, _i.e._ riders
+* Define helper functions:
+  + calc_tripDuration_and_energy(): Calculate duration of trips and energy used.
+  + combine_rowPairs(): Transform dataset so each row is a trip.
+
+```{r, cache = TRUE, echo = FALSE}
+# Filter for user events, sort, and add duration and energy_diff columns
+LV_rebal_user_only <- LV_rebal_sf %>% 
+  filter(str_detect(reason, "user"))%>% 
+  arrange(vehicleId, occurredAt) # sort by vehicle ID and time
+
+### Helper Functions
+# Define function for calcuating trip durations and energy levels ----
+calc_tripDuration_and_energy <- function(x) {
+  
+  output <- list() # initialize list
+  
+  for (veh in unique(x$vehicleId)) { # for each unique vehicle
+    this_vehicle_set <- x %>% filter(vehicleId == veh) # filter for that vehicle
+    print(veh) # print so we can see the progress of the loop
+    
+    for (i in 1:nrow(this_vehicle_set)) { # for each row of this vehicle
+      if (i%%2 == 1) { # if this is an odd number row
+        
+        # the trip duration is the time for the next row minus the time for this row
+        this_vehicle_set$duration[i] <- difftime(this_vehicle_set$occurredAt[i+1], this_vehicle_set$occurredAt[i], units = 'mins')
+        
+        # same with energy level
+        this_vehicle_set$energy_diff[i] <- this_vehicle_set$vehicleEnergyLevel[i+1]- this_vehicle_set$vehicleEnergyLevel[i] 
+        } else {}
+    }
+    output[[veh]] <- this_vehicle_set
+  }
+  
+  as.data.frame(data.table::rbindlist(output,
+                                      idcol = "vehicleId"))
+  
+}
+
+# One with a start and end time and start and end location ----
+combine_rowPairs <- function(x) { # x should be the output of calc_tripDuration_and_energy()
+  
+  temp <- data.frame("vehicleID" = c(0), # initialize temp dataframe with columns
+                     "start_time" = c(0), 
+                     "end_time" = c(0), 
+                     "trip_origin" = c(0), 
+                     "trip_dest" = c(0), 
+                     "duration" = c(0), 
+                     "energy_diff" = c(0))
+  
+  output <- list() # initialize output list
+  
+  for (i in seq(nrow(x) - 1)) { 
+    # need to do minus 1 b/c if there is an odd number of rows, the last row of the trip_dest column will be empty
+    # and cannot be binded with the other rows
+    if (i%%2 == 1) {
+      
+      print(i)
+
+      temp$vehicleID = x$vehicleId[i]
+      temp$start_time = x$occurredAt[i]
+      temp$end_time = x$occurredAt[i+1]
+      temp$trip_origin = x$location[i]
+      temp$trip_dest = x$location[i+1]
+      temp$duration = x$duration[i]
+      temp$energy_diff = x$energy_diff[i]
+      
+      output[[i]] <- temp
+      
+    } else {}
+  }
+  
+  output <- as.data.frame(data.table::rbindlist(output))
+  
+}
+
+# LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>%
+#   calc_tripDuration_and_energy() %>%
+#   combine_rowPairs()
+
+# June 2019 ----
+# LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
+#   filter(year(occurredAt) == 2019, month(occurredAt) == 6) 
+# 
+# LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>% 
+#   calc_tripDuration_and_energy()
+# 
+# LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>% 
+#   combine_rowPairs()
+
+LV_rebal_user_only_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_combined_rowPairs,
+#         file = LV_rebal_user_only_combined_rowPairs_RDS)
+
+LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_0619_combined_rowPairs,
+#         file = LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
+# Read the saved object with the code below
+LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowPairs_RDS)
+LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+```
+
+```{r, eval = FALSE}
+# Filter for user events, sort, and add duration and energy_diff columns
+LV_rebal_user_only <- LV_rebal_sf %>% 
+  filter(str_detect(reason, "user"))%>% 
+  arrange(vehicleId, occurredAt) # sort by vehicle ID and time
+
+### Helper Functions
+# Define function for calcuating trip durations and energy levels ----
+calc_tripDuration_and_energy <- function(x) {
+  
+  output <- list() # initialize list
+  
+  for (veh in unique(x$vehicleId)) { # for each unique vehicle
+    this_vehicle_set <- x %>% filter(vehicleId == veh) # filter for that vehicle
+    print(veh) # print so we can see the progress of the loop
+    
+    for (i in 1:nrow(this_vehicle_set)) { # for each row of this vehicle
+      if (i%%2 == 1) { # if this is an odd number row
+        
+        # the trip duration is the time for the next row minus the time for this row
+        this_vehicle_set$duration[i] <- difftime(this_vehicle_set$occurredAt[i+1], this_vehicle_set$occurredAt[i], units = 'mins')
+        
+        # same with energy level
+        this_vehicle_set$energy_diff[i] <- this_vehicle_set$vehicleEnergyLevel[i+1]- this_vehicle_set$vehicleEnergyLevel[i] 
+        } else {}
+    }
+    output[[veh]] <- this_vehicle_set
+  }
+  
+  as.data.frame(data.table::rbindlist(output,
+                                      idcol = "vehicleId"))
+  
+}
+
+# One with a start and end time and start and end location ----
+combine_rowPairs <- function(x) { # x should be the output of calc_tripDuration_and_energy()
+  
+  temp <- data.frame("vehicleID" = c(0), # initialize temp dataframe with columns
+                     "start_time" = c(0), 
+                     "end_time" = c(0), 
+                     "trip_origin" = c(0), 
+                     "trip_dest" = c(0), 
+                     "duration" = c(0), 
+                     "energy_diff" = c(0))
+  
+  output <- list() # initialize output list
+  
+  for (i in seq(nrow(x) - 1)) { 
+    # need to do minus 1 b/c if there is an odd number of rows, the last row of the trip_dest column will be empty
+    # and cannot be binded with the other rows
+    if (i%%2 == 1) {
+      
+      print(i)
+
+      temp$vehicleID = x$vehicleId[i]
+      temp$start_time = x$occurredAt[i]
+      temp$end_time = x$occurredAt[i+1]
+      temp$trip_origin = x$location[i]
+      temp$trip_dest = x$location[i+1]
+      temp$duration = x$duration[i]
+      temp$energy_diff = x$energy_diff[i]
+      
+      output[[i]] <- temp
+      
+    } else {}
+  }
+  
+  output <- as.data.frame(data.table::rbindlist(output))
+  
+}
+
+LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>%
+  calc_tripDuration_and_energy() %>%
+  combine_rowPairs()
+
+# June 2019 ----
+LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
+  filter(year(occurredAt) == 2019, month(occurredAt) == 6)
+
+LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>%
+  calc_tripDuration_and_energy()
+
+LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>%
+  combine_rowPairs()
+
+LV_rebal_user_only_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_combined_rowPairs,
+#         file = LV_rebal_user_only_combined_rowPairs_RDS)
+
+LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_0619_combined_rowPairs,
+#         file = LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
+# Read the saved object with the code below
+# LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowPairs_RDS)
+# LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+```
+
+### Rebalance Events
+
+* Limit data to "rebalance" events
+* Loops:
+  + Remove "duplicated" events. Sometimes there will be consecutive pick up events for a single vehicle.
+  + calc_tripDuration_and_energy(): Calculate duration of trips and energy used.
+  + combine_rowPairs(): Transform dataset so each row is a trip.
+
+```{r, cache = TRUE, echo = FALSE}
+# Filter for rebalance events, sort, and add duration and energy_diff columns
+LV_rebal_rebalance_only <- LV_rebal_sf %>% 
+  filter(str_detect(reason, "rebalance"))%>% 
+  arrange(vehicleId, occurredAt) # sort by vehicle ID and time
+
+# Trim the dataset to be "pick-up; drop-off" format b/c sometimes there is [reb pick up, reb pick up, reb drop off]
+# LV_reb_ID_list <- c()
+# for (veh in unique(LV_rebal_rebalance_only$vehicleId)) {
+#   this_vehicle_set <- LV_rebal_rebalance_only %>% filter(vehicleId == veh)
+#   print(veh)
+#   output_list <- c() # initialize list
+#   for (i in 1:nrow(this_vehicle_set)) {
+#       if (this_vehicle_set$reason[i] == 'rebalance drop off') {
+#         output_list <- append(output_list, c(this_vehicle_set$id[i], this_vehicle_set$id[i-1])) #store the id of rebalance drop off and rebalance pick up before it
+#   }}
+#     LV_reb_ID_list <- append(LV_reb_ID_list, output_list) #this should store all the [pick-up, drop-off] pairs
+#   } 
+
+
+# LV_rebal_rebalance_only_trim1 <- LV_rebal_rebalance_only %>%
+#   filter(LV_rebal_rebalance_only$id %in% LV_reb_ID_list) # Trim the data set
+
+# Notice the dataset has some weird [pick-up, drop-off, drop-off] and some of them does not have [pick-up] info at all
+# We trim the dataset one more time by the other way round
+# LV_reb_ID_list2 <- c()
+# for (veh in unique(LV_rebal_rebalance_only_trim1$vehicleId)) {
+#   this_vehicle_set <- LV_rebal_rebalance_only_trim1 %>% filter(vehicleId == veh)
+#   print(veh)
+#   output_list <- c() # initialize list
+#   for (i in 1:nrow(this_vehicle_set)) {
+#     if (this_vehicle_set$reason[i] == 'rebalance pick up') {
+#       output_list <- append(output_list, c(this_vehicle_set$id[i], this_vehicle_set$id[i+1])) #store the id of rebalance drop off and rebalance pick up before it
+#     }}
+#   LV_reb_ID_list2 <- append(LV_reb_ID_list2, output_list) #this should store all the [pick-up, drop-off] pairs
+# } 
+
+# This should be our final dataset to use to generate trip origin-destination table
+# LV_rebal_rebalance_only_trim2 <- LV_rebal_rebalance_only_trim1 %>%
+#   filter(LV_rebal_rebalance_only_trim1$id %in% LV_reb_ID_list2) 
+
+# LV_rebal_reb_only_combined_rowPairs <- LV_rebal_rebalance_only_trim2 %>% 
+#   calc_tripDuration_and_energy()
+# 
+# LV_rebal_reb_only_combined_rowPairs <- LV_rebal_reb_only_combined_rowPairs%>% 
+#   combine_rowPairs()
+
+# June 2019 ----
+# LV_rebal_reb_only_0619_combined_rowPairs  <- LV_rebal_reb_only_combined_rowPairs %>%
+#   filter(year(start_time) == 2019) %>%
+#   filter(month(start_time) == 6 |month(end_time) == 6)
+
+# Save & Load
+LV_rebal_reb_only_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_reb_only_combined_rowPairs")
+
+LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                     "~RData/Louisville/LV_rebal_reb_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_reb_only_0619_combined_rowPairs,
+#                 file = LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+# saveRDS(LV_rebal_reb_only_combined_rowPairs,
+#         file = LV_rebal_reb_only_combined_rowPairs_RDS)
+
+# Read the saved object with the code below
+LV_rebal_reb_only_combined_rowPairs <- readRDS(LV_rebal_reb_only_combined_rowPairs_RDS)
+LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+
+```
+
+```{r, eval = FALSE}
+# Filter for rebalance events, sort, and add duration and energy_diff columns
+LV_rebal_rebalance_only <- LV_rebal_sf %>% 
+  filter(str_detect(reason, "rebalance"))%>% 
+  arrange(vehicleId, occurredAt) # sort by vehicle ID and time
+
+# Trim the dataset to be "pick-up; drop-off" format b/c sometimes there is [reb pick up, reb pick up, reb drop off]
+LV_reb_ID_list <- c()
+for (veh in unique(LV_rebal_rebalance_only$vehicleId)) {
+  this_vehicle_set <- LV_rebal_rebalance_only %>% filter(vehicleId == veh)
+  print(veh)
+  output_list <- c() # initialize list
+  for (i in 1:nrow(this_vehicle_set)) {
+      if (this_vehicle_set$reason[i] == 'rebalance drop off') {
+        output_list <- append(output_list, c(this_vehicle_set$id[i], this_vehicle_set$id[i-1])) #store the id of rebalance drop off and rebalance pick up before it
+  }}
+    LV_reb_ID_list <- append(LV_reb_ID_list, output_list) #this should store all the [pick-up, drop-off] pairs
+  }
+
+
+LV_rebal_rebalance_only_trim1 <- LV_rebal_rebalance_only %>%
+  filter(LV_rebal_rebalance_only$id %in% LV_reb_ID_list) # Trim the data set
+
+# Notice the dataset has some weird [pick-up, drop-off, drop-off] and some of them does not have [pick-up] info at all
+# We trim the dataset one more time by the other way round
+LV_reb_ID_list2 <- c()
+for (veh in unique(LV_rebal_rebalance_only_trim1$vehicleId)) {
+  this_vehicle_set <- LV_rebal_rebalance_only_trim1 %>% filter(vehicleId == veh)
+  print(veh)
+  output_list <- c() # initialize list
+  for (i in 1:nrow(this_vehicle_set)) {
+    if (this_vehicle_set$reason[i] == 'rebalance pick up') {
+      output_list <- append(output_list, c(this_vehicle_set$id[i], this_vehicle_set$id[i+1])) #store the id of rebalance drop off and rebalance pick up before it
+    }}
+  LV_reb_ID_list2 <- append(LV_reb_ID_list2, output_list) #this should store all the [pick-up, drop-off] pairs
+}
+
+# This should be our final dataset to use to generate trip origin-destination table
+LV_rebal_rebalance_only_trim2 <- LV_rebal_rebalance_only_trim1 %>%
+  filter(LV_rebal_rebalance_only_trim1$id %in% LV_reb_ID_list2)
+
+LV_rebal_reb_only_combined_rowPairs <- LV_rebal_rebalance_only_trim2 %>%
+  calc_tripDuration_and_energy()
+
+LV_rebal_reb_only_combined_rowPairs <- LV_rebal_reb_only_combined_rowPairs%>%
+  combine_rowPairs()
+
+# June 2019 ----
+LV_rebal_reb_only_0619_combined_rowPairs  <- LV_rebal_reb_only_combined_rowPairs %>%
+  filter(year(start_time) == 2019) %>%
+  filter(month(start_time) == 6 |month(end_time) == 6)
+
+# Save & Load
+LV_rebal_reb_only_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_reb_only_combined_rowPairs")
+
+LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                     "~RData/Louisville/LV_rebal_reb_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_reb_only_0619_combined_rowPairs,
+#                 file = LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+# saveRDS(LV_rebal_reb_only_combined_rowPairs,
+#         file = LV_rebal_reb_only_combined_rowPairs_RDS)
+
+# Read the saved object with the code below
+# LV_rebal_reb_only_combined_rowPairs <- readRDS(LV_rebal_reb_only_combined_rowPairs_RDS)
+# LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+```
+
+## Opportunity Index
+
+```{r, cache = TRUE}
+
+```
+
+## Census
+
+Plot the census data for Louisville
+
+```{r, cache = TRUE}
+grid.arrange(
+# Population
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = TotPop), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Population by census tract (2018)") +
+  mapTheme(),
+
+# pWhite
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = pWhite), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of white by census tract (2019)") +
+  mapTheme(),
+
+#pFemale
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = pFemale), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of female by census tract (2019)") +
+  mapTheme(),
+
+# MdAge
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = MdAge), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median age by census tract (2019)") +
+  mapTheme(),
+
+ncol = 2)
+
+grid.arrange(
+# MdHHInc
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = MdHHInc), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median Household Income by census tract (2019)") +
+  mapTheme(),
+
+# MedRent
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = MedRent), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median rent by census tract (2019)") +
+  mapTheme(),
+
+# TotHseUni
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = TotHseUni), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Total housing units by census tract (2019)") +
+  mapTheme(),
+
+# MedValue
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = MedValue), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median housing value by census tract (2019)") +
+  mapTheme(),
+
+ncol = 2)
+
+grid.arrange(
+#pDrive
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = pDrive), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people driving to work by census tract (2019)") +
+  mapTheme(),
+
+#pTrans
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = pTrans), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people taking public transit to work by census tract (2019)") +
+  mapTheme(),
+
+#pCom30plus
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = pCom30plus), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people commuting 30mins or more by census tract (2019)") +
+  mapTheme(),
+
+#pVehAvai
+ggplot() + 
+  geom_sf(data = LV_Census_ct, aes(fill = pVehAvai), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people having one or more vehicle available by census tract (2019)") +
+  mapTheme(),
+
+ncol = 2)
 ```

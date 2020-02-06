@@ -2,8 +2,8 @@
 # This script reads in:
 # 1. Louisville base map
 # 2. Scooter service area
-# 3. Scooter rebalance data
-# 4. Scooter Open Data
+# 3. Scooter Open Data
+# 4. Scooter rebalance data
 #
 # This makes no changes to the raw data.
 ##########################################################################
@@ -17,11 +17,11 @@ LV_SA_file <- file.path(data_directory,
 
 LV_SA_raw <- st_read(LV_SA_file)
 
+# Read open data
+LV_open_raw <- read_csv("https://data.louisvilleky.gov/sites/default/files/DocklessTripOpenData_9.csv")
+
 # Read rebalance data
 LV_rebal_file <- file.path(data_directory, 
                            "/Louisville-MDS-Status-Changes-2019Dec17.csv")
 
 LV_rebal_raw <- read_csv(LV_rebal_file)
-
-# Read open data
-LV_open_raw <- read_csv("https://data.louisvilleky.gov/sites/default/files/DocklessTripOpenData_9.csv")
