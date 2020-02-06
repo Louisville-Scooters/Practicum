@@ -1313,3 +1313,341 @@ ggplot() +
 
 ncol = 2)
 ```
+
+# KC
+
+## Read Data
+
+```{r, cache = TRUE, results = "hide"}
+# Collect census data and geometries
+KC_Census_raw1 <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "MO", 
+                         geometry = TRUE, 
+                         county=c("Jackson"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(KC_proj)
+
+KC_Census_raw2 <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "MO", 
+                         geometry = TRUE, 
+                         county=c("Johnson"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(KC_proj)
+
+KC_Census_raw <- rbind(KC_Census_raw1, KC_Census_raw2)
+
+KC_Census_geoinfo <- KC_Census_raw %>%
+  dplyr::select(GEOID, geometry)
+# st_intersection(LV_SA %>% dplyr::select(geometry))
+
+# extract centroid of each census tract
+KC_Census_geoinfo <- KC_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(KC_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(KC_Census_geoinfo))[, 2])
+
+KC_Census <- KC_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(KC_Census)
+
+KC_Census <- KC_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+```
+
+## Census
+```{r, cache = TRUE}
+grid.arrange(
+# Population
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = TotPop), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Population by census tract (2018)") +
+  mapTheme(),
+
+# pWhite
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = pWhite), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of white by census tract (2018)") +
+  mapTheme(),
+
+#pFemale
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = pFemale), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of female by census tract (2018)") +
+  mapTheme(),
+
+# MdAge
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = MdAge), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median age by census tract (2018)") +
+  mapTheme(),
+
+ncol = 2)
+
+grid.arrange(
+# MdHHInc
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = MdHHInc), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median Household Income by census tract (2018)") +
+  mapTheme(),
+
+# MedRent
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = MedRent), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median rent by census tract (2018)") +
+  mapTheme(),
+
+# TotHseUni
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = TotHseUni), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Total housing units by census tract (2018)") +
+  mapTheme(),
+
+# MedValue
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = MedValue), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median housing value by census tract (2018)") +
+  mapTheme(),
+
+ncol = 2)
+
+grid.arrange(
+#pDrive
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = pDrive), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people driving to work by census tract (2018)") +
+  mapTheme(),
+
+#pTrans
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = pTrans), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people taking public transit to work by census tract (2018)") +
+  mapTheme(),
+
+#pCom30plus
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = pCom30plus), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people commuting 30mins or more by census tract (2018)") +
+  mapTheme(),
+
+#pVehAvai
+ggplot() + 
+  geom_sf(data = KC_Census, aes(fill = pVehAvai), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people having one or more vehicle available by census tract (2018)") +
+  mapTheme(),
+
+ncol = 2)
+```
+
+# MNP
+
+## Read Data
+
+```{r, cache = TRUE, results = "hide"}
+# Set directory for DC data
+MNP_directory <- paste(data_directory, 
+                      "/MNP",
+                      sep = "")
+MNP_directory
+# List of all scooter-related files
+MNP_scooter_trip_list <- list.files(path = MNP_directory, pattern = "*.csv", full.names = T)
+
+MNP_scooter_trip_list
+MNP_scooter_data_raw <- MNP_scooter_trip_list %>% 
+  map_df(., 
+         ~ read_csv(.,
+                    col_types = cols(.default = "c")) %>% # read all the columns as characters for simplicity
+           set_names(., tolower(names(.))) %>%
+           mutate(dataset = .x,
+                  dataset = str_match(dataset, paste(MNP_directory, "(.*?)", "\\.csv", sep = ""))[, 2]))
+
+# Change the stattime and endtime to datetime object
+MNP_scooter_data_raw$starttime <- as_datetime(MNP_scooter_data_raw$starttime)
+MNP_scooter_data_raw$endtime <- as_datetime(MNP_scooter_data_raw$endtime)
+
+MNP_scooter_data_raw <- MNP_scooter_data_raw %>%
+  dplyr::select(-objectid)
+
+# Read street centerline shapefile
+MNP_ST_file <- file.path(MNP_directory,
+                         "PW_Street_Centerline/PW_Street_Centerline.shp")
+
+MNP_street <- st_read(MNP_ST_file) %>%
+  st_transform(MNP_proj)
+
+# Read city boundary shapefile 
+MNP_ct_file <- file.path(MNP_directory,
+                         "MNP_CityLimits/msvcGIS_MinneapolisCityLimits.shp")
+
+MNP_ct <- st_read(MNP_ct_file) %>%
+  st_transform(MNP_proj)
+
+# Collect census data and geometries
+MNP_Census_raw <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "MN", 
+                         geometry = TRUE, 
+                         county = c("Hennepin"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(MNP_proj)
+
+MNP_Census_geoinfo <- MNP_Census_raw %>%
+  dplyr::select(GEOID, geometry) %>%
+  st_intersection(MNP_ct %>% dplyr::select(geometry))
+
+# extract centroid of each census tract
+MNP_Census_geoinfo <- MNP_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 2])
+
+MNP_Census <- MNP_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(MNP_Census)
+
+MNP_Census <- MNP_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+```
+
+## Census
+
+```{r, cache = TRUE}
+grid.arrange(
+# Population
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = TotPop), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Population by census tract (2018)") +
+  mapTheme(),
+
+# pWhite
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = pWhite), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of white by census tract (2018)") +
+  mapTheme(),
+
+#pFemale
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = pFemale), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of female by census tract (2018)") +
+  mapTheme(),
+
+# MdAge
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = MdAge), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median age by census tract (2018)") +
+  mapTheme(),
+
+ncol = 2)
+
+grid.arrange(
+# MdHHInc
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = MdHHInc), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median Household Income by census tract (2018)") +
+  mapTheme(),
+
+# MedRent
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = MedRent), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median rent by census tract (2018)") +
+  mapTheme(),
+
+# TotHseUni
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = TotHseUni), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Total housing units by census tract (2018)") +
+  mapTheme(),
+
+# MedValue
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = MedValue), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Median housing value by census tract (2018)") +
+  mapTheme(),
+
+ncol = 2)
+
+grid.arrange(
+#pDrive
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = pDrive), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people driving to work by census tract (2018)") +
+  mapTheme(),
+
+#pTrans
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = pTrans), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people taking public transit to work by census tract (2018)") +
+  mapTheme(),
+
+#pCom30plus
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = pCom30plus), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people commuting 30mins or more by census tract (2018)") +
+  mapTheme(),
+
+#pVehAvai
+ggplot() + 
+  geom_sf(data = MNP_Census, aes(fill = pVehAvai), color = "white", alpha = 0.8) +
+  scale_fill_viridis()+
+  labs(title = "Percentage of people having one or more vehicle available by census tract (2018)") +
+  mapTheme(),
+
+ncol = 2)
+```
