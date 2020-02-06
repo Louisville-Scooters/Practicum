@@ -87,7 +87,7 @@ grid.arrange(
   ggplot() + 
     geom_sf(data = CH_Census_ct, aes(fill = pCom30plus), color = "white", alpha = 0.8) +
     scale_fill_viridis()+
-    labs(title = "Percentage of people commuting >= 30mins or more by census tract (2018)") +
+    labs(title = "Percentage of people commuting >= 30mins by census tract (2018)") +
     mapTheme(),
   
   #pVehAvai
