@@ -37,6 +37,13 @@ MNP_ST_file <- file.path(MNP_directory,
 MNP_street <- st_read(MNP_ST_file) %>%
   st_transform(MNP_proj)
 
+# Read trail centerline shapefile
+MNP_TR_file <- file.path(MNP_directory,
+                         "Pedestrian_and_Bicycle_Trails/Pedestrian_and_Bicycle_Trails.shp")
+
+MNP_TR_file <- st_read(MNP_TR_file) %>%
+  st_transform(MNP_proj)
+
 # Read city boundary shapefile 
 MNP_ct_file <- file.path(MNP_directory,
                          "MNP_CityLimits/msvcGIS_MinneapolisCityLimits.shp")
