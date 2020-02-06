@@ -51,4 +51,4 @@ MNP_ct_file <- file.path(MNP_directory,
 MNP_ct <- st_read(MNP_ct_file) %>%
   st_transform(MNP_proj)
 
-ggplot(MNP_ct) + geom_sf()
+ggplot(MNP_Trail) + geom_sf()
