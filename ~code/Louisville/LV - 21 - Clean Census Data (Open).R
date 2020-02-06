@@ -22,3 +22,12 @@ names(LV_Census)
 LV_Census <- LV_Census %>%
   dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
                 pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+LV_tract_list <- ct_LV$GEOID
+
+LV_Census_ct <- LV_Census %>%
+  filter(LV_Census$GEOID %in% LV_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+LV_Census_ct <- merge(ct_LV, LV_Census_ct, by = 'GEOID')
