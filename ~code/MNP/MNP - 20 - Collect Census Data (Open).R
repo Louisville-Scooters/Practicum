@@ -34,19 +34,3 @@ MNP_Census_geoinfo <- MNP_Census_geoinfo %>%
   mutate(centroid_X = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 1],
          centroid_Y = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 2])
 
-MNP_Census <- MNP_Census_raw %>% 
-  mutate(pWhite = White_Pop / TotPop,
-         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
-         pTrans = Total_Public_Trans / Means_of_Transport_pop,
-         pDrive = Total_cartruckvan/Means_of_Transport_pop,
-         pFemale = TotFemale/TotPop,
-         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
-                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
-         pOccupied = Occupied/Total_occupancy,
-         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
-
-# names(MNP_Census)
-
-MNP_Census <- MNP_Census %>%
-  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
-                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)

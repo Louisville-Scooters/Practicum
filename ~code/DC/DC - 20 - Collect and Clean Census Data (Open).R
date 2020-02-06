@@ -44,3 +44,12 @@ DC_Census <- DC_Census_raw %>%
 DC_Census <- DC_Census %>%
   dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
                 pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+DC_tract_list <- DC_Census_geoinfo$GEOID
+
+DC_Census_ct <- DC_Census %>%
+  filter(DC_Census$GEOID %in% DC_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+DC_Census_ct <- merge(DC_Census_geoinfo, DC_Census_ct, by = 'GEOID')
