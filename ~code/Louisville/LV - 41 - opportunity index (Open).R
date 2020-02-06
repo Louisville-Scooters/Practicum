@@ -16,19 +16,19 @@
 # structured rebalance data (i.e. LV_rebal_reb_only_0619_combined_rowPairs here) could be obtained by running code LV - 04.
 # obtain fields about longitude and latitude.
 LV_rebal_reb_only_0619_combined_rowPairs[c("lon_s", "lat_s")] <- do.call(rbind, 
-                                           lapply(strsplit(LV_rebal_reb_only_0619_combined_rowPairs$trip_origin, "[()]"), 
-                                                  function(col) {   
-                                                    (parts <- unlist(strsplit(col[2], " ")))
-                                                  }
-                                           )
+                                                                         lapply(strsplit(LV_rebal_reb_only_0619_combined_rowPairs$trip_origin, "[()]"), 
+                                                                                function(col) {   
+                                                                                  (parts <- unlist(strsplit(col[2], " ")))
+                                                                                }
+                                                                         )
 )
 
 LV_rebal_reb_only_0619_combined_rowPairs[c("lon_d", "lat_d")] <- do.call(rbind, 
-                                         lapply(strsplit(LV_rebal_reb_only_0619_combined_rowPairs$trip_dest, "[()]"), 
-                                                function(col) {   
-                                                  (parts <- unlist(strsplit(col[2], " ")))
-                                                }
-                                         )
+                                                                         lapply(strsplit(LV_rebal_reb_only_0619_combined_rowPairs$trip_dest, "[()]"), 
+                                                                                function(col) {   
+                                                                                  (parts <- unlist(strsplit(col[2], " ")))
+                                                                                }
+                                                                         )
 )
 
 LV_rebal_reb_only_0619_combined_rowPairs$lon_s <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lon_s)
@@ -61,19 +61,19 @@ LV_users_dropoff_ct$End.Census.Tract <- as.character(LV_users_dropoff_ct$End.Cen
 # users data ####
 # LV_rebal_user_only_0619_combined_rowPairs could be obtained by running code LV - 03
 LV_rebal_user_only_0619_combined_rowPairs[c("lon_s", "lat_s")] <- do.call(rbind, 
-                                           lapply(strsplit(LV_rebal_user_only_0619_combined_rowPairs$trip_origin, "[()]"), 
-                                                  function(col) {   
-                                                    (parts <- unlist(strsplit(col[2], " ")))
-                                                  }
-                                           )
+                                                                          lapply(strsplit(LV_rebal_user_only_0619_combined_rowPairs$trip_origin, "[()]"), 
+                                                                                 function(col) {   
+                                                                                   (parts <- unlist(strsplit(col[2], " ")))
+                                                                                 }
+                                                                          )
 )
 
 LV_rebal_user_only_0619_combined_rowPairs[c("lon_d", "lat_d")] <- do.call(rbind, 
-                                            lapply(strsplit(LV_rebal_user_only_0619_combined_rowPairs$trip_dest, "[()]"), 
-                                                   function(col) {   
-                                                     (parts <- unlist(strsplit(col[2], " ")))
-                                                   }
-                                            )
+                                                                          lapply(strsplit(LV_rebal_user_only_0619_combined_rowPairs$trip_dest, "[()]"), 
+                                                                                 function(col) {   
+                                                                                   (parts <- unlist(strsplit(col[2], " ")))
+                                                                                 }
+                                                                          )
 )
 
 LV_rebal_user_only_0619_combined_rowPairs$lon_s <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lon_s)
