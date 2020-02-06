@@ -111,6 +111,7 @@ ct_LV_count <- merge(ct_LV_count %>% select(GEOID, Ocount), End_count, by.x='GEO
 ct_LV_count$diff <- ct_LV_count$ecount - ct_LV_count$Ocount
 
 ggplot() +
+  geom_sf(data = ct_LV, fill='grey') +
   geom_sf(data=ct_LV_count %>%
             select(GEOID, diff) %>%
             merge(ct_LV, by='GEOID') %>% st_as_sf(), aes(fill=diff)) +
@@ -123,7 +124,7 @@ ggplot() +
 # extract data
 most_flow_out <- subset(users_ct_june, users_ct_june$Start.Census.Tract=='21111007100')
 most_flow_out_cnt <- most_flow_out %>%
-  group_by(lon_s,lat_s,lon_d, lat_d) %>%
+  group_by(lon_d, lat_d) %>%
   summarise(cnt=n())
 
 ggplot()+
