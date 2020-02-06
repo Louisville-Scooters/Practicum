@@ -917,14 +917,34 @@ LV_OI_bymonth <- LV_study.panel %>%
   left_join(LV_Census_geoinfo, by = c('End.Census.Tract' = 'GEOID'))
 ```
 
-### Map
+### Maps
+
+#### Opportunity Index
+
+Opportunity Index = (Rebalance In) + (User Trips In)
+
+Aggregated to the week.
+
+```{r, cache = TRUE}
+ggplot() +
+  geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = mean_OI)) +
+  scale_fill_viridis() +
+  mapTheme() +
+  labs(title = "Opportunity Index by Census Tract in Louisville")
+```
+
+#### Net Scooter Flow
+
+Net Scooter Flow = (Opportunity Index) - (User Trips Out)
+
+Aggregated to the week.
 
 ```{r, cache = TRUE}
 ggplot() +
   geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = diff)) +
   scale_fill_viridis() +
   mapTheme() +
-  labs(title = "Opportunity Index by Census Tract in Louisville")
+  labs(title = "Net Scooter Flow by Census Tract in Louisville")
 ```
 
 ## Census
@@ -1659,4 +1679,33 @@ grid.arrange(
     mapTheme(),
   
   ncol = 2)
+```
+
+# All Cities
+
+```{r, cache = TRUE}
+AU_Census$city <- 'Austin'
+KC_Census$city <- 'Kansas City'
+LV_Census$city <- 'Louisville'
+MNP_Census$city <- 'Minneapolis'
+DC_Census$city <- 'DC'
+
+AU_KC_LV_MNP_DC_Census <- rbind(AU_Census %>% st_set_geometry(NULL), 
+                         KC_Census %>% st_set_geometry(NULL), 
+                         LV_Census %>% st_set_geometry(NULL),
+                         MNP_Census %>% st_set_geometry(NULL),
+                         DC_Census %>% st_set_geometry(NULL))
+
+AU_KC_LV_MNP_DC_Census_gather <- AU_KC_LV_MNP_DC_Census %>%
+  dplyr::select(-GEOID) %>%
+  gather(key='Variable',"Value", -city)
+
+ggplot() +
+  geom_boxplot(data = as.data.frame(AU_KC_LV_MNP_DC_Census_gather), aes(x=city, y=Value, fill=city)) +
+  scale_fill_viridis(discrete = T)+
+  facet_wrap(~Variable, ncol = 4, scales = "free") +
+  #labs(title = "Price as a function of continuous variables") +
+  theme(axis.text.x = element_blank(), legend.position = 'right', axis.text.x.bottom = element_blank()) +
+  plotTheme
+
 ```
