@@ -8,9 +8,9 @@
 #
 ##########################################################################
 
-MNP_origin_by_tract_0619 <- st_join(MNP_scooter_0619_sf, MNP_Census_ct)
+MNP_scooter_0619_addcensus <- st_join(MNP_scooter_0619_sf, MNP_Census_ct)
 
-MNP_origin_by_tract_0619 <- data.frame(table(MNP_origin_by_tract_0619$GEOID))
+MNP_origin_by_tract_0619 <- data.frame(table(MNP_scooter_0619_addcensus$GEOID))
 names(MNP_origin_by_tract_0619) <-c("GEOID", "Count_origin")
 
 MNP_origin_by_tract_0619 <- merge(MNP_Census_ct, MNP_origin_by_tract_0619, by = 'GEOID')

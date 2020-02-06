@@ -28,6 +28,22 @@ MNP_street_unique <- MNP_street_unique %>%
 
 MNP_street_centroid <- st_as_sf(MNP_street_unique %>% st_set_geometry(NULL), coords = c('centroid_X', 'centroid_Y'), crs = 26849)
 
+# Trail
+MNP_Trail <- MNP_Trail %>%
+  mutate(centroid_X = st_coordinates(st_centroid(MNP_Trail))[,1],
+         centroid_Y = st_coordinates(st_centroid(MNP_Trail))[, 2])
+
+ggplot() + geom_point(data = MNP_Trail, aes(x = centroid_X, y = centroid_Y))
+
+ggplot() + geom_sf(data = MNP_Census_ct) + geom_point(data = MNP_Trail, aes(x = centroid_X, y = centroid_Y))
+
+MNP_Trail
+
+ggplot() + geom_point(data = MNP_Trail, aes(x = centroid_X, y = centroid_Y))
+
+MNP_street_centroid <- st_as_sf(MNP_street_unique %>% st_set_geometry(NULL), coords = c('centroid_X', 'centroid_Y'), crs = 26849)
+
+
 # Keep 2019 June data only
 MNP_scooter_0619 <- MNP_scooter_data %>%
   filter(dataset == "/Motorized_Foot_Scooter_Trips_June_2019")
@@ -36,7 +52,10 @@ MNP_scooter_0619 <- MNP_scooter_data %>%
 MNP_scooter_0619_sf <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
 
 MNP_scooter_0619_sf <- st_as_sf(MNP_scooter_0619_sf, crs = MNP_proj)
-
+MNP_scooter_0619_sf$endcenterlineid <- as.character(as.integer(MNP_scooter_0619_sf$endcenterlineid))
 #still cannot join endcenterline id
-MNP_scooter_0619_final <- merge(MNP_scooter_0619_sf, MNP_street_centroid %>% dplyr::select(GBSID, geometry), by.x = 'endcenterlineid', by.y = 'GBSID')
-names(MNP_scooter_0619_sf)
+MNP_scooter_0619_final <- merge(MNP_scooter_0619_sf %>% st_drop_geometry(), 
+                                MNP_street_centroid %>% dplyr::select(GBSID, geometry), by.x = 'endcenterlineid', by.y = 'GBSID')
+filter(MNP_scooter_0619_sf, is.na(MNP_scooter_0619_sf$endcenterlineid))
+
+head(MNP_scooter_0619_sf$endcenterlineid)
