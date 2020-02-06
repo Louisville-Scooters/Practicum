@@ -102,3 +102,4 @@ LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 KC_proj <-2817 # https://spatialreference.org/ref/epsg/2817/
 MNP_proj <- 26849 #https://www.spatialreference.org/ref/epsg/26849/
 AU_proj <- 2246 
+CH_proj <- 3529 #https://www.spatialreference.org/ref/?search=Illinois
