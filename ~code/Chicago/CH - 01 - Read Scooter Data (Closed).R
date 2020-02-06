@@ -23,3 +23,10 @@ CH_scooter_0619 <- CH_scooter_clean %>%
 
 CH_scooter_0819 <- CH_scooter_clean %>%
   filter(month(`Start Time`) == 8)
+
+# Read city boundary shapefile 
+CH_ct_file <- file.path(CH_directory,
+                         "Boundaries - Census Tracts - 2010/geo_export_afd3fb8b-c948-4bba-b83c-b2a0ac543749.shp")
+
+CH_ct <- st_read(CH_ct_file) %>%
+  st_transform(CH_proj)
