@@ -44,6 +44,8 @@ library(sp)
 library(viridis)
 library(maptools)
 library(stringr)
+library(grid)
+library(gridExtra)
 
 # Palettes and Themes
 paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
