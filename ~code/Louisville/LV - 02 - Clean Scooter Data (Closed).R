@@ -76,8 +76,34 @@ make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
   output
 }
 
-# Example of make_LV_sf() function
-# LV_open_sf <- make_LV_open_sf(LV_open_raw[1:10,],
-#                               trip_end = "origins",
-#                               proj = LV_proj) %>%
-#   st_intersection(LV_SA)
+### Make and save open data origins ----
+# LV_open_origins <- make_LV_open_sf(LV_open_raw,
+#                                    trip_end = "origins",
+#                                    proj = LV_proj) %>%
+#   .[LV_SA,]
+
+LV_open_origins_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_open_origins")
+# 
+# saveRDS(LV_open_origins,
+#         file = LV_open_origins_RDS)
+
+# Read the saved object with the code below
+LV_open_origins <- readRDS(LV_open_origins_RDS)
+
+
+### Make and save open data destinations ----
+# LV_open_dests <- make_LV_open_sf(LV_open_raw,
+#                                  trip_end = "dests",
+#                                  proj = LV_proj) %>%
+#   .[LV_SA,]
+
+LV_open_dests_RDS <- file.path(data_directory, 
+                                 "~RData/Louisville/LV_open_dests")
+
+# saveRDS(LV_open_dests,
+#         file = LV_open_dests_RDS)
+
+# Read the saved object with the code below
+LV_open_dests <- readRDS(LV_open_dests_RDS)
+
