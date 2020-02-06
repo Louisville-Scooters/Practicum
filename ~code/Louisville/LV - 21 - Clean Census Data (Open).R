@@ -7,7 +7,18 @@
 ##########################################################################
 
 LV_Census <- LV_Census_raw %>% 
-  mutate(Percent_White = White_Pop / Total_Pop,
+  mutate(pWhite = White_Pop / TotPop,
          Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
-         Percent_Taking_Public_Trans = Total_Public_Trans / Means_of_Transport_pop,
-         Percent_vehicle_available = 1 - No_vehicle / Vehicle_own_pop)
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+names(LV_Census)
+
+LV_Census <- LV_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
