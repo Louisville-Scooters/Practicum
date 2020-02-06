@@ -30,7 +30,7 @@ calc_tripDuration_and_energy <- function(x) {
       if (i%%2 == 1) { # if this is an odd number row
         
         # the trip duration is the time for the next row minus the time for this row
-        this_vehicle_set$duration[i] <- this_vehicle_set$occurredAt[i+1]- this_vehicle_set$occurredAt[i]
+        this_vehicle_set$duration[i] <- difftime(this_vehicle_set$occurredAt[i+1], this_vehicle_set$occurredAt[i], units = 'mins')
         
         # same with energy level
         this_vehicle_set$energy_diff[i] <- this_vehicle_set$vehicleEnergyLevel[i+1]- this_vehicle_set$vehicleEnergyLevel[i] 
@@ -86,12 +86,19 @@ LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
   filter(year(occurredAt) == 2019, month(occurredAt) == 6) 
 
 LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>% 
-  calc_tripDuration_and_energy() %>% 
+  calc_tripDuration_and_energy()
+
+LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>% 
   combine_rowPairs()
 
+ggplot(LV_rebal_user_only_0619_combined_rowPairs, aes(duration))+
+  geom_histogram() +
+  xlim(0, 5000) +
+  ylim(0, 250)
+
 # All user data ----
-# LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>% 
-#   calc_tripDuration_and_energy() %>% 
+# LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>%
+#   calc_tripDuration_and_energy() %>%
 #   combine_rowPairs()
 
 LV_rebal_user_only_combined_rowPairs_RDS <- file.path(data_directory, 
@@ -100,5 +107,34 @@ LV_rebal_user_only_combined_rowPairs_RDS <- file.path(data_directory,
 # saveRDS(LV_rebal_user_only_combined_rowPairs,
 #         file = LV_rebal_user_only_combined_rowPairs_RDS)
 
+LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_0619_combined_rowPairs,
+#         file = LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
 # Read the saved object with the code below
 LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowPairs_RDS)
+LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
+##### TESTING ----
+
+LV_rebal_user_only_combined_rowPairs %>% ggplot(aes(x = duration)) +
+  geom_histogram(bins = 50)
+
+LV_rebal_user_only_test <- LV_rebal_user_only %>% 
+  mutate(month = month(occurredAt),
+         year = year(occurredAt))
+
+LV_count_dupes <- LV_rebal_user_only_test %>% 
+  mutate(duplicate = ifelse(lag(reason, 1) == reason & lag(vehicleId, 1) == vehicleId, 
+                            TRUE, 
+                            FALSE))
+
+LV_dupe_summary <- LV_count_dupes %>% 
+  as.data.frame() %>% 
+  group_by(year, month) %>% 
+  summarize(dupe_count = sum(duplicate, na.rm = TRUE),
+            row_count = n(),
+            dupe_percentage = dupe_count / row_count)
+#### /TESTING

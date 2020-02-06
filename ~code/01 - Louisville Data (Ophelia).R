@@ -1,37 +1,14 @@
-library(here)
-library(tidyverse)
-library(sf)
-library(measurements)
-library(dplyr)
-library(sp)
-library(tidycensus)
-library(lubridate)
-library(viridis)
-library(maptools)
-library(rgeos)
-library(stringr)
-
-paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
-palette5 <- c("#25CB10", "#5AB60C", "#8FA108","#C48C04", "#FA7800")
-
-
-
-setwd(here::here())
-
-data_directory <- paste(str_remove(here(), "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
-                        "/~data", 
-                        sep = "")
 
 base_map <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7baa9141a95_30.geojson")
 proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
 base_map_proj <- base_map %>% st_transform(proj)
 
 # Read rebalance data ----
-rebalance_file <- paste(data_directory, 
-                        "/Louisville-MDS-Status-Changes-2019Dec17.csv",
-                        sep = "")
-
-rebalance_data <- read_csv(rebalance_file)
+# rebalance_file <- paste(data_directory, 
+#                         "/Louisville-MDS-Status-Changes-2019Dec17.csv",
+#                         sep = "")
+# 
+# rebalance_data <- read_csv(rebalance_file)
 
 # What is the distribution of scooter status change activities?
 
@@ -139,6 +116,7 @@ energy_diff <- c(0)
 
 test <- data.frame()
 
+
 for (i in 1:nrow(new_df)) {
   if (i%%2 == 1) {
     j = i/2 + 0.5
@@ -241,18 +219,19 @@ duration_place_plot <- ggplot()+
 duration_place_plot
 
 ## for rebalance only data ####
-rebalance_0619 <- rebalance_only %>%
-  filter(year(occurredAt) == 2019,
-         month(occurredAt) == 6)
+# rebalance_0619 <- rebalance_only %>%
+#   filter(year(occurredAt) == 2019,
+#          month(occurredAt) == 6)
+# 
+# glimpse(rebalance_0619)
+# rebalance_0619$operators <- as.factor(rebalance_0619$operators)
 
-glimpse(rebalance_0619)
-rebalance_0619$operators <- as.factor(rebalance_0619$operators)
 
+# rebalance_0619 <- rebalance_0619[order(rebalance_0619$vehicleId, rebalance_0619$occurredAt),]
+# rebalance_0619 <- rebalance_0619 %>%
+#   mutate(duration = 0,
+#          energy_diff = 0)
 
-rebalance_0619 <- rebalance_0619[order(rebalance_0619$vehicleId, rebalance_0619$occurredAt),]
-rebalance_0619 <- rebalance_0619 %>%
-  mutate(duration = 0,
-         energy_diff = 0)
 
 
 #trim the dataset to be "pick-up; drop-off" format

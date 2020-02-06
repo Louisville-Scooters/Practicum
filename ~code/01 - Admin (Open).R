@@ -78,6 +78,17 @@ mapTheme <- function(base_size = 12) {
 }
 
 # Helper functions
+qBr <- function(df, variable, rnd) {
+  if (missing(rnd)) {
+    as.character(quantile(round(df[[variable]],0),
+                          c(.01,.2,.4,.6,.8), na.rm=T))
+  } else if (rnd == FALSE | rnd == F) {
+    as.character(formatC(quantile(df[[variable]]), digits = 3),
+                 c(.01,.2,.4,.6,.8), na.rm=T)
+  }
+}
+
+q5 <- function(variable) {as.factor(ntile(variable, 5))}
 
 # Projections
 DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
