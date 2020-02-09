@@ -9,6 +9,7 @@
 # 1. AU_scooter
 ##########################################################################
 AU_scooter_raw <- AU_scooter_raw[-1,] # na row
+AU_scooter_raw <- AU_scooter_raw[-1,] # problematic row
 AU_scooter_raw <- dplyr::select(AU_scooter_raw,-`Modified Date`) # NA COLUMN
 # format time columns
 AU_scooter_raw$`Start Time` <- as.POSIXct(AU_scooter_raw$`Start Time`, format='%m/%d/%Y %I:%M:%S %p')
