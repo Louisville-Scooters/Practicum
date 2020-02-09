@@ -123,7 +123,7 @@ LV_users_pickup_ct <- LV_rebal_user_only_0619_combined_rowPairs_ct_start %>%
 
 LV_study.panel <- left_join(LV_study.panel, LV_users_pickup_ct %>% st_set_geometry(NULL), how='left', by = c("week", "End.Census.Tract")) %>% 
   mutate(cnt_out = replace_na(cnt_out, 0),
-         diff = OI / cnt_out)
+         diff = OI / cnt_out, ratio = mean_out/mean_OI)
 
 ### weekly opportunity index in June
 LV_OI_bymonth <- LV_study.panel %>%
