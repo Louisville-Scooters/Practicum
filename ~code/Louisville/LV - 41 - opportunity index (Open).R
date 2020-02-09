@@ -123,13 +123,13 @@ LV_users_pickup_ct <- LV_rebal_user_only_0619_combined_rowPairs_ct_start %>%
 
 LV_study.panel <- left_join(LV_study.panel, LV_users_pickup_ct %>% st_set_geometry(NULL), how='left', by = c("week", "End.Census.Tract")) %>% 
   mutate(cnt_out = replace_na(cnt_out, 0),
-         diff = OI - cnt_out)
+         diff = OI / cnt_out)
 
 ### weekly opportunity index in June
 LV_OI_bymonth <- LV_study.panel %>%
   group_by(End.Census.Tract) %>%
   summarise(mean_OI = mean(OI), mean_out = mean(cnt_out)) %>% 
-  mutate(diff = mean_OI - mean_out) %>% 
+  mutate(diff =  mean_OI - mean_out, ratio = mean_out/mean_OI) %>% 
   left_join(LV_Census_geoinfo, by = c('End.Census.Tract' = 'GEOID'))
 
 ggplot() +
@@ -137,3 +137,9 @@ ggplot() +
   scale_fill_viridis() +
   mapTheme() +
   labs(title = "Opportunity Index by Census Tract in Louisville")
+
+ggplot() +
+  geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = ratio)) +
+  scale_fill_viridis() +
+  mapTheme() +
+  labs(title = "Ratio of out-flow and Opportunity Index \nby Census Tract in Louisville")
