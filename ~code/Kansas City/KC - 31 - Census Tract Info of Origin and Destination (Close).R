@@ -17,9 +17,10 @@ KC_scooter_ct <- st_join(KC_scooter_sf, KC_Census_geoinfo %>% dplyr::select(GEOI
   rename(Start.Census.Tract=GEOID)
 
 KC_scooter_ct <- st_as_sf(as.data.frame(KC_scooter_ct) %>% dplyr::select(-geometry), coords = c('end_longitude','end_latitude'),crs=4326) %>%
-  mutate(lon_d = unlist(map(geometry, 1)),
-         lat_d = unlist(map(geometry, 2))) %>%
-  st_transform(KC_proj)
+  st_transform(KC_proj) %>%
+  mutate(end_longitude = unlist(map(geometry, 1)),
+         end_latitude = unlist(map(geometry, 2))) 
+
 
 KC_scooter_ct <- st_join(KC_scooter_ct, KC_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
   rename(End.Census.Tract=GEOID)
