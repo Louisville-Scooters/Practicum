@@ -793,6 +793,13 @@ LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
 # LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
 ```
 
+### Are scooter providers complying with rebalancing policy?
+
+[Link to policy](https://data.louisvilleky.gov/sites/default/files/Dockless_Policy_7_12_2019.pdf)
+
+* Vehicle Limits
+  + 
+
 ## Opportunity Index
 
 ```{r, cache = TRUE}

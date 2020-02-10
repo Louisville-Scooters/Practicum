@@ -2,8 +2,9 @@
 # This script reads in:
 # 1. Louisville base map
 # 2. Scooter service area
-# 3. Scooter Open Data
-# 4. Scooter rebalance data
+# 3. Scooter distribution areas
+# 4. Scooter Open Data
+# 5. Scooter rebalance data
 #
 # This makes no changes to the raw data.
 ##########################################################################
@@ -16,6 +17,12 @@ LV_SA_file <- file.path(data_directory,
                         "Dockless Vehicle Service Area/Dockless_Vehicle_Service_Area.shp")
 
 LV_SA_raw <- st_read(LV_SA_file)
+
+# Read in distribution areas
+LV_distro_areas_file <- file.path(data_directory,
+                             "Dockless Vehicle Distribution Zones v2/Dockless_Vehicle_Distribution_Zones.shp")
+
+LV_distro_areas_raw <- st_read(LV_distro_areas_file)
 
 # Read open data
 LV_open_raw <- read_csv("https://data.louisvilleky.gov/sites/default/files/DocklessTripOpenData_9.csv")
