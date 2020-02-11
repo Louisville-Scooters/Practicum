@@ -98,10 +98,10 @@ LV_cycleway <- st_geometry(LV_cycleway$osm_lines) %>%
 
 LV_cycleway %>% st_join(LV_Census_geoinfo %>% st_intersection(LV_SA))
 
-ggplot()+
-  geom_sf(data = LV_office)+
-  #geom_sf(data = LV_shop, color='red')+
-  geom_sf(data = LV_SA,fill='transparent')
+## code to plot and check the OSM data
+# ggplot()+
+#   geom_sf(data = LV_office)+
+#   geom_sf(data = LV_SA,fill='transparent')
 ## create a panal to store spatial effects ####
 LV_Census_panel <- LV_Census_geoinfo %>% st_intersection(LV_SA %>% dplyr::select(geometry))
 
@@ -131,15 +131,20 @@ nn_function <- function(measureFrom,measureTo,k) {
 LV_Census_panel$KNN_university <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
                                               coordinates(LV_college %>% st_coordinates()),
                                               1)
+ggplot() +
+  geom_sf(data=LV_Census_panel ,aes(fill=KNN_university))+
+  scale_fill_viridis(direction = -1)
 
 LV_Census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
                                               coordinates(LV_restaurant %>% st_coordinates()),
                                               5)
+ggplot() +
+  geom_sf(data=LV_Census_panel ,aes(fill=KNN_restaurant))+
+  scale_fill_viridis(direction = -1)
 
 LV_Census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
                                               coordinates(LV_public_transport %>% st_coordinates()),
                                               10)
-
 ggplot() +
   geom_sf(data=LV_Census_panel ,aes(fill=KNN_public_transport))+
   scale_fill_viridis(direction = -1)
@@ -154,6 +159,10 @@ LV_restaurant_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA),LV_rest
 LV_restaurant_ct$restaurant_density <- LV_restaurant_ct$count/LV_restaurant_ct$area
 #LV_Census_panel$restaurant_density <- LV_restaurant_ct$restaurant_density
 
+ggplot() +
+  geom_sf(data=LV_restaurant_ct,aes(fill=restaurant_density))+
+  scale_fill_viridis()
+
 # public transport ####
 LV_public_transport_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA),LV_public_transport) %>%
   group_by(GEOID,area) %>%
@@ -161,6 +170,10 @@ LV_public_transport_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA),L
 
 LV_public_transport_ct$public_transport_density <- LV_restaurant_ct$count/LV_restaurant_ct$area
 #LV_Census_panel$public_transport_density <- LV_public_transport_ct$public_transport_density
+
+ggplot() +
+  geom_sf(data=LV_public_transport_ct,aes(fill=public_transport_density))+
+  scale_fill_viridis()
 
 # cycleway ####
 LV_cycleway_ct_len <- st_intersection(LV_cycleway,LV_Census_geoinfo) %>%
