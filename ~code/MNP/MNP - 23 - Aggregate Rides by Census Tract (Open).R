@@ -6,16 +6,16 @@
 
 ### Open Data ----
 # Count origins for each census tract
-LV_open_origins_ct <- LV_Census_ct %>% 
-  mutate(origins_cnt = lengths(st_intersects(., LV_open_origins)))
+MNP_open_origins_ct <- MNP_Census_ct %>% 
+  mutate(origins_cnt = lengths(st_intersects(., MNP_open_origins)))
 
 # Count dests for each census tract
-LV_open_dests_ct <- LV_Census_ct %>% 
-  mutate(dests_cnt = lengths(st_intersects(., LV_open_dests)))
+MNP_open_dests_ct <- MNP_Census_ct %>% 
+  mutate(dests_cnt = lengths(st_intersects(., MNP_open_dests)))
 
 # Combine
-LV_open_ct <- LV_open_origins_ct %>% 
-  left_join(LV_open_dests_ct %>% 
+MNP_open_ct <- MNP_open_origins_ct %>% 
+  left_join(MNP_open_dests_ct %>% 
               st_drop_geometry() %>%
               dplyr::select(GEOID, dests_cnt),
             by = "GEOID")
