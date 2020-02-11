@@ -17,6 +17,9 @@ DC_scooter_data <- DC_scooter_data_raw %>%
     company = tolower(str_extract(dataset, "Lime|Bird|JUMP|skip|Spin|Razor|razor|Lyft")),         
     end_date = str_extract(original_end_time, "[0-9]{1,2}\\/[0-9]{1,2}\\/[0-9]{1,2}"),
     end_time = str_extract(original_end_time, "[0-9]{1,2}:[0-9]{1,2}"))
+# transform data type
+DC_scooter_ct$original_start_time <- as.POSIXct(DC_scooter_ct$original_start_time, format = '%m/%d/%y %H:%M')
+DC_scooter_ct$original_end_time <- as.POSIXct(DC_scooter_ct$original_end_time, format = '%m/%d/%y %H:%M')
 
 # Make sf objects ----
 make_DC_sf <- function(x, # x should be 'DC_scooter_data'
