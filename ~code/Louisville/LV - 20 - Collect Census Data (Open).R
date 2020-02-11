@@ -27,7 +27,7 @@ LV_Census_raw <- get_acs(geography = "tract",
 
 LV_Census_geoinfo <- LV_Census_raw %>%
   dplyr::select(GEOID, geometry) %>%
-  st_intersection(LV_SA %>% dplyr::select(geometry))
+  st_join(LV_SA) %>% na.omit() %>% dplyr::select(GEOID,geometry)
 
 # extract centroid of each census tract
 LV_Census_geoinfo <- LV_Census_geoinfo %>% 
