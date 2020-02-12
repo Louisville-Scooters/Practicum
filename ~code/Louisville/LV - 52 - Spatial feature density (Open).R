@@ -4,6 +4,7 @@
 
 # This script export the file: 
 # 1. LV_spatial_panel which has both KNN and density info (can decide later to use which one)
+# 2. LV_spatial_census which has both spatial and census vars 
 
 ##########################################################################
 
@@ -101,8 +102,13 @@ LV_spatial_panel <- left_join(LV_Census_panel, LV_retail_ct%>%st_set_geometry(NU
 LV_spatial_panel[is.na(LV_spatial_panel)] <- 0
 
 LV_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_panel")
-
 # saveRDS(LV_spatial_panel,
 #        file = LV_spatial_panel_RDS)
-
 LV_spatial_panel <- readRDS(LV_spatial_panel_RDS)
+
+LV_spatial_census <- left_join(LV_spatial_panel, LV_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+
+LV_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_census")
+#saveRDS(LV_spatial_census,
+#        file = LV_spatial_census_RDS)
+LV_spatial_census <- readRDS(LV_spatial_census_RDS)

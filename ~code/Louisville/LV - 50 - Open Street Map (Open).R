@@ -7,7 +7,7 @@
 # Office (KNN, 5)
 # Tourism (density)
 # Leisure (density)
-# Cycleway (?)
+# Cycleway (density)
 # Public_transport station (KNN, 5)
 
 # !!!! Focus on XINYI's part !!!!
