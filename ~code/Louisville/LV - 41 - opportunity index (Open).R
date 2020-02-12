@@ -11,22 +11,8 @@
 # 1. 
 ##########################################################################
 
-### extraction  (could be deleted if it is included in other files) ####
-# rebalancing data####
-# structured rebalance data (i.e. LV_rebal_reb_only_0619_combined_rowPairs here) could be obtained by running code LV - 04.
-# obtain fields about longitude and latitude.
-LV_rebal_reb_only_0619_combined_rowPairs <- LV_rebal_reb_only_0619_combined_rowPairs %>% 
-  mutate(week = week(end_time)) %>% 
-  st_as_sf(sf_column_name = "trip_origin", crs = LV_proj) %>% 
-  mutate(lon_s = st_coordinates(.)[1],
-         lat_s = st_coordinates(.)[2]) %>% 
-  as.data.frame() %>% 
-  st_as_sf(sf_column_name = "trip_dest", crs = LV_proj) %>% 
-  mutate(lon_d = st_coordinates(.)[1],
-         lat_d = st_coordinates(.)[2]) %>% 
-  as.data.frame()
-
-# then, we want to know which census tract did these trips ended in.
+# June 2019 ----
+# we want to know which census tract did these trips ended in.
 LV_rebal_reb_only_0619_combined_rowPairs_sf_end <- st_as_sf(LV_rebal_reb_only_0619_combined_rowPairs, 
                                                         sf_column_name = "trip_dest", crs = LV_proj)
 

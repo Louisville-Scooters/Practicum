@@ -27,7 +27,7 @@
 # - Spin - 150 max vehicles/day - launched August 2019
 ##########################################################################
 
-# Add requirements to distro areas
+# 1. Add requirements to distro areas ----
 LV_distro_areas <- LV_distro_areas_raw %>% 
   mutate(Dist_Zone = as.character(Dist_Zone),
          # include the requirement for fleets between 350 and 1050. Currently the only requirements that apply
@@ -36,21 +36,28 @@ LV_distro_areas <- LV_distro_areas_raw %>%
                                  TRUE ~ NA_real_)) %>% 
   st_transform(LV_proj)
 
-# Join Census tracts to distro areas
+# 2. Join Census tracts to distro areas
 LV_Census_byDistroArea <- st_join(LV_Census_raw %>% st_centroid(.),
                                   LV_distro_areas,
                                   join = st_within) %>% 
-  mutate(Dist_Zone = ifelse(GEOID == "21111000200", "1", Dist_Zone)) %>% # manually add a district for this one
-  st_drop_geometry()
+  mutate(Dist_Zone = ifelse(GEOID == "21111000200", "1", Dist_Zone)) # manually add a district for this one
 
 LV_Census_byDistroArea <- LV_Census_raw %>% 
-  left_join(LV_Census_byDistroArea %>% dplyr::select(GEOID, Dist_Zone, Pl2040Area, rebal_req),
+  left_join(LV_Census_byDistroArea %>% st_drop_geometry() %>% dplyr::select(GEOID, Dist_Zone, Pl2040Area, rebal_req),
             by = c("GEOID"))
 
 tm_shape(LV_Census_byDistroArea) + tm_polygons(col = "Dist_Zone")
 
-# Determine rebalance numbers for every census tract
+# 3. Determine rebalance numbers for every census tract - June 2019 ----
+# limit to Bird and Lime
+LV_largeFleets <- c("Bird", "Lime")
+LV_rebal_largeFleets_only <- LV_rebal_sf %>% 
+  st_drop_geometry() %>% 
+  filter(str_detect(operators, LV_largeFleets))
+
 LV_rebal_reb_only_0619_combined_rowPairs_ct_startEnd <- LV_rebal_reb_only_0619_combined_rowPairs_ct_start %>% 
+  # keep only the Bird and Lime vehicles
+  filter(vehicleID %in% LV_rebal_largeFleets_only$vehicleId) %>% 
   left_join(LV_rebal_reb_only_0619_combined_rowPairs_ct_end %>% 
               st_drop_geometry() %>% 
               dplyr::select(vehicleID, start_time, end_time, End.Census.Tract),
@@ -60,6 +67,8 @@ LV_rebal_reb_only_0619_combined_rowPairs_ct_startEnd <- LV_rebal_reb_only_0619_c
 
 # Determine user trip numbers for every census tract
 LV_rebal_user_only_0619_combined_rowPairs_ct_startEnd <- LV_rebal_user_only_0619_combined_rowPairs_ct_start %>% 
+  # keep only the Bird and Lime vehicles
+  filter(vehicleID %in% LV_rebal_largeFleets_only$vehicleId) %>% 
   left_join(LV_rebal_user_only_0619_combined_rowPairs_ct_end %>% 
               st_drop_geometry() %>% 
               dplyr::select(vehicleID, start_time, end_time, End.Census.Tract),
@@ -103,8 +112,26 @@ LV_rebal_0619_combined_rowPairs_ct_flows <- LV_rebal_0619_combined_rowPairs_ct_o
   mutate(OI = rebal_in + user_in - rebal_out,
          OI_percent = OI / sum(OI))
 
+# Plot by week
 ggplot(LV_rebal_0619_combined_rowPairs_ct_flows,
        aes(x = week,
-           y = OI,
+           y = OI_percent,
            color = Dist_Zone)) +
-  geom_jitter()
+  geom_jitter() +
+  facet_wrap(~ Dist_Zone) +
+  labs(title = "Proportion of Opportunity Index by Zone",
+       subtitle = "Requirement: 20% of each operator’s vehicles must be located\nwithin zones 1 and 9 and 10% must be in zone 8")
+
+# Average for the month and map
+LV_rebal_0619_combined_rowPairs_ct_flows_month <- LV_rebal_0619_combined_rowPairs_ct_flows %>% 
+  ungroup() %>% 
+  group_by(Dist_Zone) %>% 
+  summarize(OI = sum(OI, na.rm = TRUE),
+            OI_percent = mean(OI_percent, na.rm = TRUE)) %>% 
+  st_drop_geometry() %>% 
+  right_join(LV_distro_areas, by = "Dist_Zone") %>% 
+  st_as_sf()
+
+tm_shape(LV_rebal_0619_combined_rowPairs_ct_flows_month) + tm_polygons(col = "OI_percent")
+
+# 4. Determine rebalance numbers for every census tract - all rebalance data ----
