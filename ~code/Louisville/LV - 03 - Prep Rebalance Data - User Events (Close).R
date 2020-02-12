@@ -116,25 +116,3 @@ LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
 # Read the saved object with the code below
 LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowPairs_RDS)
 LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
-
-##### TESTING ----
-
-LV_rebal_user_only_combined_rowPairs %>% ggplot(aes(x = duration)) +
-  geom_histogram(bins = 50)
-
-LV_rebal_user_only_test <- LV_rebal_user_only %>% 
-  mutate(month = month(occurredAt),
-         year = year(occurredAt))
-
-LV_count_dupes <- LV_rebal_user_only_test %>% 
-  mutate(duplicate = ifelse(lag(reason, 1) == reason & lag(vehicleId, 1) == vehicleId, 
-                            TRUE, 
-                            FALSE))
-
-LV_dupe_summary <- LV_count_dupes %>% 
-  as.data.frame() %>% 
-  group_by(year, month) %>% 
-  summarize(dupe_count = sum(duplicate, na.rm = TRUE),
-            row_count = n(),
-            dupe_percentage = dupe_count / row_count)
-#### /TESTING

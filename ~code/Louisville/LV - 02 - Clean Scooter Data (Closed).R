@@ -26,7 +26,8 @@ LV_SA <- LV_SA_raw %>%
 #                             wkt = "location",
 #                             crs = 4326) %>%
 #   st_transform(LV_proj) %>%
-#   mutate(operators = ifelse(operators == "Bolt Lousiville", # fix typo
+#   mutate(occurredAt = with_tz(occurredAt, "America/New_York"),
+#          operators = ifelse(operators == "Bolt Lousiville", # fix typo
 #                             "Bolt Louisville",
 #                             operators),
 #          operators = as.factor(operators),
