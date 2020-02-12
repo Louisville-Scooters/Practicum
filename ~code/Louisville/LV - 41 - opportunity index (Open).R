@@ -85,8 +85,7 @@ LV_rebal_user_only_0619_combined_rowPairs_ct_start <- st_join(LV_rebal_user_only
                                                               dplyr::select(GEOID), st_within, left=T) %>% 
   rename(Start.Census.Tract = GEOID)
 
-
-# first we focus on rebalancing drop off data
+# now the user dropoff and pickup data
 LV_users_dropoff_ct <- LV_rebal_user_only_0619_combined_rowPairs_ct_end %>%
   na.omit() %>%
   group_by(week, End.Census.Tract) %>%
