@@ -11,10 +11,8 @@
 # 1. 
 ##########################################################################
 
-### extraction  (could be deleted if it is included in other files) ####
-# rebalancing data####
-# structured rebalance data (i.e. LV_rebal_reb_only_0619_combined_rowPairs here) could be obtained by running code LV - 04.
-# obtain fields about longitude and latitude.
+# June 2019 ----
+# we want to know which census tract did these trips ended in.
 LV_rebal_reb_only_0619_combined_rowPairs <- LV_rebal_reb_only_0619_combined_rowPairs %>% 
   mutate(week = week(end_time)) %>% 
   st_as_sf(sf_column_name = "trip_origin", crs = LV_proj) %>% 
@@ -26,7 +24,6 @@ LV_rebal_reb_only_0619_combined_rowPairs <- LV_rebal_reb_only_0619_combined_rowP
          lat_d = st_coordinates(.)[2]) %>% 
   as.data.frame()
 
-# then, we want to know which census tract did these trips ended in.
 LV_rebal_reb_only_0619_combined_rowPairs_sf_end <- st_as_sf(LV_rebal_reb_only_0619_combined_rowPairs, 
                                                         sf_column_name = "trip_dest", crs = LV_proj)
 
@@ -85,8 +82,7 @@ LV_rebal_user_only_0619_combined_rowPairs_ct_start <- st_join(LV_rebal_user_only
                                                               dplyr::select(GEOID), st_within, left=T) %>% 
   rename(Start.Census.Tract = GEOID)
 
-
-# first we focus on rebalancing drop off data
+# now the user dropoff and pickup data
 LV_users_dropoff_ct <- LV_rebal_user_only_0619_combined_rowPairs_ct_end %>%
   na.omit() %>%
   group_by(week, End.Census.Tract) %>%
@@ -143,3 +139,60 @@ ggplot() +
   scale_fill_viridis() +
   mapTheme() +
   labs(title = "Ratio of out-flow and Opportunity Index \nby Census Tract in Louisville")
+
+# For all data ----
+# we want to know which census tract did these trips ended in.
+LV_rebal_reb_only_combined_rowPairs <- LV_rebal_reb_only_combined_rowPairs %>% 
+  mutate(week = week(end_time)) %>% 
+  st_as_sf(sf_column_name = "trip_origin", crs = LV_proj) %>% 
+  mutate(lon_s = st_coordinates(.)[1],
+         lat_s = st_coordinates(.)[2]) %>% 
+  as.data.frame() %>% 
+  st_as_sf(sf_column_name = "trip_dest", crs = LV_proj) %>% 
+  mutate(lon_d = st_coordinates(.)[1],
+         lat_d = st_coordinates(.)[2]) %>% 
+  as.data.frame()
+
+LV_rebal_reb_only_combined_rowPairs_sf_end <- st_as_sf(LV_rebal_reb_only_combined_rowPairs, 
+                                                            sf_column_name = "trip_dest", crs = LV_proj)
+
+LV_rebal_reb_only_combined_rowPairs_ct_end <- st_join(LV_rebal_reb_only_combined_rowPairs_sf_end, 
+                                                           LV_Census_geoinfo %>% 
+                                                             dplyr::select(GEOID), st_within, left=T) %>% 
+  rename(End.Census.Tract = GEOID)
+
+LV_rebal_reb_only_combined_rowPairs_sf_start <- st_as_sf(LV_rebal_reb_only_0619_combined_rowPairs, 
+                                                              sf_column_name = "trip_origin", crs = LV_proj)
+
+LV_rebal_reb_only_combined_rowPairs_ct_start <- st_join(LV_rebal_reb_only_combined_rowPairs_sf_start, 
+                                                             LV_Census_geoinfo %>% 
+                                                               dplyr::select(GEOID), st_within, left=T) %>% 
+  rename(Start.Census.Tract = GEOID)
+
+# users data ####
+LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only_combined_rowPairs %>% 
+  mutate(week = week(end_time)) %>% 
+  st_as_sf(sf_column_name = "trip_origin", crs = LV_proj) %>% 
+  mutate(lon_s = st_coordinates(.)[1],
+         lat_s = st_coordinates(.)[2]) %>% 
+  as.data.frame() %>% 
+  st_as_sf(sf_column_name = "trip_dest", crs = LV_proj) %>% 
+  mutate(lon_d = st_coordinates(.)[1],
+         lat_d = st_coordinates(.)[2]) %>% 
+  as.data.frame()
+
+LV_rebal_user_only_combined_rowPairs_sf_end <- st_as_sf(LV_rebal_user_only_combined_rowPairs, 
+                                                             sf_column_name = "trip_dest", crs = LV_proj)
+
+LV_rebal_user_only_combined_rowPairs_ct_end <- st_join(LV_rebal_user_only_combined_rowPairs_sf_end, 
+                                                            LV_Census_geoinfo %>% 
+                                                              dplyr::select(GEOID), st_within, left=T) %>% 
+  rename(End.Census.Tract = GEOID)
+
+LV_rebal_user_only_combined_rowPairs_sf_start <- st_as_sf(LV_rebal_user_only_combined_rowPairs, 
+                                                               sf_column_name = "trip_origin", crs = LV_proj)
+
+LV_rebal_user_only_combined_rowPairs_ct_start <- st_join(LV_rebal_user_only_combined_rowPairs_sf_start, 
+                                                              LV_Census_geoinfo %>% 
+                                                                dplyr::select(GEOID), st_within, left=T) %>% 
+  rename(Start.Census.Tract = GEOID)

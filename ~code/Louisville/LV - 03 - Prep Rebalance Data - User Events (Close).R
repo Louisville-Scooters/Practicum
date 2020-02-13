@@ -118,10 +118,6 @@ LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowP
 LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
 
 ##### TESTING ----
-
-LV_rebal_user_only_combined_rowPairs %>% ggplot(aes(x = duration)) +
-  geom_histogram(bins = 50)
-
 LV_rebal_user_only_test <- LV_rebal_user_only %>% 
   mutate(month = month(occurredAt),
          year = year(occurredAt))
@@ -137,4 +133,4 @@ LV_dupe_summary <- LV_count_dupes %>%
   summarize(dupe_count = sum(duplicate, na.rm = TRUE),
             row_count = n(),
             dupe_percentage = dupe_count / row_count)
-#### /TESTING
+##### END TESTING

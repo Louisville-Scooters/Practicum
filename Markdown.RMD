@@ -798,7 +798,34 @@ LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
 [Link to policy](https://data.louisvilleky.gov/sites/default/files/Dockless_Policy_7_12_2019.pdf)
 
 * Vehicle Limits
-  + 
+    + General
+        - A total of 8 operators will be permitted to operate within Metro designated operational zones.
+        - Fleet increases subject to general compliance with all policy provisions
+        - Calculations for assessing fleet size increases shall follow this formula:
+          `rides per vehicle per day = total rides / total permitted vehicles`
+    + For Full-Operating Permit Holders
+        - Operators may apply for possible incremental increases of 200 vehicles per month provided that:
+            1. Ridership exceeds 3 rides per vehicle per day on vehicles owned by that operator.
+            2. Issues identified by Metro are being adequately addressed to Metro’s satisfaction
+        - A cap of 1,050 vehicles applies to each operator.
+        - Fleet Reductions:
+            1. If ridership falls below an average of 2 rides per vehicle per day in the preceding month, the operator must remove vehicles from service. The specific number of vehicles to be removed will be determined by Metro based upon the available data and contributing factors (seasonal shifts, etc.).
+        - Cap Extensions
+            1. Vehicle caps may be raised at the discretion of Metro. Considerations factoring into raising the caps are as follows:
+                * Ridership exceeds 5 rides per vehicle per day on average over the preceding month.
+                * Issues identified by Metro are being adequately addressed to Metro’s satisfaction.
+    + Current Limits
+        - Bird - 450 max vehicles/day - launched August 2018
+        - Lime - 450 max vehicles/day - launched November 2018
+        - Bolt - 150 max vehicles/day - launched July 2019
+        - Spin - 150 max vehicles/day - launched August 2019
+* Distribution Requirements
+    >To ensure access to shared mobility transportation options throughout the community, Metro has established distribution zones. Distribution zones are intended to ensure that no singular zone is intentionally over-served or under-served. Operators must comply with distributional requirements. Failure to comply with this provision constitutes a breach of the license and may result in the assessment of fleet size reductions, suspension, or even termination of the license. The duration of any suspension shall be at the sole discretion of Metro but will be no less than 6 months. Terminations shall apply for 1 year.
+    + For operators with 150 permitted vehicles or fewer, there are no distributional requirements.
+        - For operators with permitted fleets ranging in size between 150 and 350 vehicles, 20% of each operator’s vehicles must be located within zones 1 and 9.
+        - Distribution plans within Zones 1 and 9 must be submitted to Metro for approval to ensure adequate accessibility for residents of each zone has been achieved.
+        - For fleets ranging in size between 350 and 1050 vehicles, 20% of each operator’s vehicles must be located within zones 1 and 9 and 10% must be in zone 8.
+        - Distribution plans within Zones 1, 8, and 9 must be submitted to Metro for approval to ensure adequate accessibility for residents of each zone has been achieved.
 
 ## Opportunity Index
 
