@@ -38,6 +38,34 @@ ggplot(data = LV_rebal_byScooter_DOW, aes(weekdays, perd, group = 1))+
   geom_line(size = 1) +
   plotTheme
 
+# rebalance only
+LV_rebal_DOW_data <- LV_rebal_rebalance_only %>% 
+  mutate(hour = hour(occurredAt),
+         weekday = lubridate::wday(occurredAt, label = TRUE))
+
+LV_rebal_DOW_data %>% 
+  ggplot() +
+  geom_freqpoly(aes(hour, color = weekday), binwidth = 1) +
+  labs(title = "Scooter Rebalancing in Louisville by day of week and hour",
+       x="Hour", 
+       y="Trip Counts")+
+  xlim(0, 23)+
+  theme_minimal()
+
+# user only
+LV_user_DOW_data <- LV_rebal_user_only %>% 
+  mutate(hour = hour(occurredAt),
+         weekday = lubridate::wday(occurredAt, label = TRUE))
+
+LV_user_DOW_data %>% 
+  ggplot() +
+  geom_freqpoly(aes(hour, color = weekday), binwidth = 1) +
+  labs(title = "Scooter User Activity in Louisville by day of week and hour",
+       x="Hour", 
+       y="Trip Counts")+
+  xlim(0, 23)+
+  theme_minimal()
+
 # Which companies contribute most to rebalancing? ---- 
 LV_company_contribution <- as.data.frame(prop.table(table(LV_rebal_rebalance_only$operators)),
                                          stringsAsFactors = FALSE) %>% 

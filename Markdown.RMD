@@ -58,6 +58,8 @@ library(maptools)
 library(stringr)
 library(grid)
 library(gridExtra)
+
+options(tigris_use_cache = TRUE)
 ```
 
 ## Themes and Color Palettes
@@ -244,6 +246,20 @@ LV_Census_raw <- get_acs(geography = "tract",
   dplyr::select(GEOID, 
                 geometry,
                 census_colNames) %>% 
+  st_transform(LV_proj)
+
+# Read in distribution areas
+LV_distro_areas_file <- file.path(data_directory,
+                             "Dockless Vehicle Distribution Zones v2/Dockless_Vehicle_Distribution_Zones.shp")
+
+LV_distro_areas_raw <- st_read(LV_distro_areas_file)
+
+LV_distro_areas <- LV_distro_areas_raw %>% 
+  mutate(Dist_Zone = as.character(Dist_Zone),
+         # include the requirement for fleets between 350 and 1050. Currently the only requirements that apply
+         rebal_req = case_when(Dist_Zone %in% c("1", "9") ~ 0.2,
+                                 Dist_Zone == "8" ~ 0.1,
+                                 TRUE ~ NA_real_)) %>% 
   st_transform(LV_proj)
 ```
 
@@ -433,11 +449,13 @@ make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
 
 ## Rebalance Data
 
-Each row is a trip end. _E.g._ one row is a pickup at a certain location, and the next row is the dropoff, though the data is not always so clean.
+The Rebalance Data is a dataset that lists every "status change" for every scooter operated in Louisville between November 2018 and December 2019.
+
+Each row is a trip end. _E.g._ one row is a pickup at a certain location, and the next row is the dropoff, though the data is not always so clean, and events that should be paired do not have a corresponding entry.
 
 ### User Events
 
-* Limit data to "user" events, _i.e._ riders
+* Limit data to "user" events, _i.e._ riders picking up and dropping off a scooter.
 * Define helper functions:
   + calc_tripDuration_and_energy(): Calculate duration of trips and energy used.
   + combine_rowPairs(): Transform dataset so each row is a trip.
@@ -646,6 +664,23 @@ LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
 # LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
 ```
 
+User Activity is highest in the mid-day and evening and peaks on Saturdays.
+
+```{r, cache = TRUE, fig.height = 8, fig.width = 8}
+LV_user_DOW_data <- LV_rebal_user_only %>% 
+  mutate(hour = hour(occurredAt),
+         weekday = lubridate::wday(occurredAt, label = TRUE))
+
+LV_user_DOW_data %>% 
+  ggplot() +
+  geom_freqpoly(aes(hour, color = weekday), binwidth = 1) +
+  labs(title = "Scooter User Activity in Louisville by day of week and hour",
+       x="Hour", 
+       y="Trip Counts")+
+  xlim(0, 23)+
+  theme_minimal()
+```
+
 ### Rebalance Events
 
 * Limit data to "rebalance" events
@@ -793,39 +828,278 @@ LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
 # LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
 ```
 
+Rebalancing activity primarily occurs in the early morning and late night hours.
+
+```{r, cache = TRUE, fig.height = 8, fig.width = 8}
+LV_rebal_DOW_data <- LV_rebal_rebalance_only %>% 
+  mutate(hour = hour(occurredAt),
+         weekday = lubridate::wday(occurredAt, label = TRUE))
+
+LV_rebal_DOW_data %>% 
+  ggplot() +
+  geom_freqpoly(aes(hour, color = weekday), binwidth = 1) +
+  labs(title = "Scooter Rebalancing in Louisville by day of week and hour",
+       x="Hour", 
+       y="Trip Counts")+
+  xlim(0, 23)+
+  theme_minimal()
+```
+
+The flow maps below show the census tracts with the highest inflow of scooters from rebalancing.
+
+![Rebalance inflow](rebalance_inflow_combined.png)
+
+
 ### Are scooter providers complying with rebalancing policy?
 
-[Link to policy](https://data.louisvilleky.gov/sites/default/files/Dockless_Policy_7_12_2019.pdf)
+```{r, echo = FALSE, cache = TRUE}
+LV_rebal_sf_list_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_rebal_sf_list")
 
-* Vehicle Limits
-    + General
-        - A total of 8 operators will be permitted to operate within Metro designated operational zones.
-        - Fleet increases subject to general compliance with all policy provisions
-        - Calculations for assessing fleet size increases shall follow this formula:
-          `rides per vehicle per day = total rides / total permitted vehicles`
-    + For Full-Operating Permit Holders
-        - Operators may apply for possible incremental increases of 200 vehicles per month provided that:
-            1. Ridership exceeds 3 rides per vehicle per day on vehicles owned by that operator.
-            2. Issues identified by Metro are being adequately addressed to Metro’s satisfaction
-        - A cap of 1,050 vehicles applies to each operator.
-        - Fleet Reductions:
-            1. If ridership falls below an average of 2 rides per vehicle per day in the preceding month, the operator must remove vehicles from service. The specific number of vehicles to be removed will be determined by Metro based upon the available data and contributing factors (seasonal shifts, etc.).
-        - Cap Extensions
-            1. Vehicle caps may be raised at the discretion of Metro. Considerations factoring into raising the caps are as follows:
-                * Ridership exceeds 5 rides per vehicle per day on average over the preceding month.
-                * Issues identified by Metro are being adequately addressed to Metro’s satisfaction.
-    + Current Limits
-        - Bird - 450 max vehicles/day - launched August 2018 (_According to the data, they launch in August 2019_)
-        - Lime - 450 max vehicles/day - launched November 2018
-        - Bolt - 150 max vehicles/day - launched July 2019
-        - Spin - 150 max vehicles/day - launched August 2019
-* Distribution Requirements
-    >To ensure access to shared mobility transportation options throughout the community, Metro has established distribution zones. Distribution zones are intended to ensure that no singular zone is intentionally over-served or under-served. Operators must comply with distributional requirements. Failure to comply with this provision constitutes a breach of the license and may result in the assessment of fleet size reductions, suspension, or even termination of the license. The duration of any suspension shall be at the sole discretion of Metro but will be no less than 6 months. Terminations shall apply for 1 year.
-    + For operators with 150 permitted vehicles or fewer, there are no distributional requirements.
-        - For operators with permitted fleets ranging in size between 150 and 350 vehicles, 20% of each operator’s vehicles must be located within zones 1 and 9.
-        - Distribution plans within Zones 1 and 9 must be submitted to Metro for approval to ensure adequate accessibility for residents of each zone has been achieved.
-        - For fleets ranging in size between 350 and 1050 vehicles, 20% of each operator’s vehicles must be located within zones 1 and 9 and 10% must be in zone 8.
-        - Distribution plans within Zones 1, 8, and 9 must be submitted to Metro for approval to ensure adequate accessibility for residents of each zone has been achieved.
+# saveRDS(LV_rebal_sf_list,
+#         file = LV_rebal_sf_list_RDS)
+
+# Read the saved object with the code below
+LV_rebal_sf_list <- readRDS(LV_rebal_sf_list_RDS)
+
+# Add region for every active scooter
+LV_rebal_sf_list_2 <- LV_rebal_sf_list %>% 
+  filter(!is.na(long),
+         !is.na(lat)) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj, remove = FALSE) %>% 
+  st_join(., LV_distro_areas %>% dplyr::select(Dist_Zone)) %>% 
+  st_drop_geometry() %>% 
+  mutate(Dist_Zone = factor(Dist_Zone,
+                            levels = paste(1:9)))
+
+LV_rebal_sf_list_summary <- LV_rebal_sf_list %>% 
+  left_join(LV_rebal_sf_list_2 %>% dplyr::select(vehicleId, Dist_Zone, audit_date), by = c("vehicleId", "audit_date")) %>% 
+  group_by(audit_date, Dist_Zone, operators, .drop = FALSE) %>% 
+  summarize(scooters = n()) %>% 
+  filter(str_detect(operators, "Bird|Lime"),
+         !is.na(Dist_Zone)) %>%
+  ungroup() %>%
+  group_by(audit_date, operators) %>%
+  mutate(scooter_total = sum(scooters),
+         scooter_pct = scooters / scooter_total)
+
+LV_rebal_sf_list_summary_2 <- LV_rebal_sf_list_summary %>% 
+  dplyr::select(-scooter_pct) %>% 
+  spread(Dist_Zone, scooters, sep = "_") %>% 
+  mutate(Dist_8_pct = ifelse(is.na(Dist_Zone_8 / scooter_total), 0, Dist_Zone_8 / scooter_total), 
+         Dist_1_9_pct = ifelse(is.na((Dist_Zone_1 + Dist_Zone_9) / scooter_total), 0, (Dist_Zone_1 + Dist_Zone_9) / scooter_total),
+         compliance = case_when(scooter_total > 150 & Dist_1_9_pct < 0.2 ~ "No",
+                                scooter_total > 350 & (Dist_1_9_pct < 0.2 | Dist_8_pct < 0.1) ~ "No",
+                                TRUE ~ "Yes"))
+```
+
+With the goal of promoting equity of transportation access, the City of Louisville requires scooter providers operating more than a certain number of vehicles to distribute a percentage of those vehicles to particular zones. Per the city's dockless vehicle policy: 
+
+> Distribution zones are intended to ensure that no singular zone is intentionally over-served or under-served.
+
+For operators with more than 150 vehicles, 20% of vehicles must be in zones 1 and 9. For operators with more than 350 vehicles, an additional 10% of scooters must be in zone 8.
+
+```{r, cache = TRUE}
+LV_distro_areas_map <- LV_distro_areas %>% 
+  mutate(Dist_Zone2 = case_when(Dist_Zone %in% c(1, 9) ~ "Zones 1 and 9 (20%)",
+                                Dist_Zone == 8 ~ "Zone 8 (10%)",
+                                TRUE ~ NA_character_))
+
+ggplot() +
+  geom_sf(data = LV_distro_areas_map, aes(fill = Dist_Zone2)) +
+  scale_fill_viridis_d(limits = c("Zones 1 and 9 (20%)", "Zone 8 (10%)"),
+                       direction = -1, 
+                       na.translate = FALSE) +
+  mapTheme() +
+  labs(title = "Scooter Rebalancing Requirements in Louisville")
+```
+
+Currently, Bird and Lime are the only operators permitted to operate more than 150 scooters in Louisville, with each having a limit of 450.  However, this doesn't necessarily mean they are deploying fleets up to the full limit.
+
+While the Rebalance Data tell us about vehicle flows -- what vehicles have entered and exited the system and where are they moving -- they don't at first glance tell us about the status of the entire fleet. That a vehicle hasn't moved in a while and doesn't appear in the Rebalance Data on a particular day doesn't mean it's not somewhere in the city ready to be ridden.
+
+However, by tracking the most recent status of each vehicle at any given time, we can get a snapshot at any point in time with the locations of every available scooter in Louisville.
+
+Process:
+    1. Assign an `active`, `reserved`, and `inactive` status for every event type.
+    2. Find a time interval to audit. For this vignette, we look at noon at mid-month for every month from the beginning of scooter service in Louisville (November 2018) to December 2019.
+    3. For each vehicle in the dataset (determined by unique `vehicleId`), find its most recent status at each audit time.
+        * If the scooter's status is `active`, return its location.
+        * Set a `buffer` time. If the scooter hasn't had a status change in the last 10 days, consider it `inactive` and removed from the fleet.
+    4. For every active scooter, determine which distribution zone it's located in.
+    5. Summarize the vehicles by distribution zone and operator to see who is complying with the rebalancing requirements.
+    
+
+```{r, eval = FALSE}
+LV_active_status <- c("user drop off",
+                      "rebalance drop off",
+                      "maintenance drop off",
+                      "service start")
+
+LV_reserved_status <- c("user pick up")
+
+LV_inactive_status <- c("rebalance pick up",
+                        "maintenance pick up",
+                        "service end",
+                        "low battery",
+                        "maintenance")
+
+# Function for finding the last status for every scooter 
+LV_extract_latest_status <- function(x, # list of scooter dataframes
+                                     datetime, # format = "YYYY-MM-DD HH:MM"
+                                     # hour, # format = "HH:MM" in 24 hour time
+                                     buffer # of days since last activity that we're willing to consider a scooter still active. 
+){
+  
+  time <- as.POSIXct(datetime)
+  
+  tmp <-  x %>% 
+    as.data.frame() %>% 
+    dplyr::select(vehicleId, occurredAt, reason, operators, location, long, lat) %>% 
+    filter(occurredAt <= time) %>% # can we replace this with the buffer call below?
+    arrange(occurredAt) %>% 
+    tail(1) %>% 
+    filter(as.numeric(time - occurredAt) <= buffer,
+           reason %in% LV_active_status)
+  
+  if(nrow(tmp) > 0) {
+    output <- tmp %>% 
+      mutate(Date = as.Date(occurredAt),
+             Hour = hour(occurredAt),
+             active = 1) %>% 
+      dplyr::select(vehicleId, Date, Hour, operators, active, long, lat)
+    
+  } else {
+    
+    output <- data.frame(vehicleId = x$vehicleId[1],
+                         Date = as.Date(time),
+                         Hour = hour(time),
+                         operators = x$operators[1],
+                         active = 0,
+                         long = NA_real_,
+                         lat = NA_real_,
+                         stringsAsFactors = FALSE)
+  }
+  
+  # output <- data.frame(Date = as.Date(time),
+  #                      Hour = hour(time),
+  #                      vehicleId = df$vehicleId[1],
+  #                      operators = df$vehicleId[1],
+  #                      location = ifelse(nrow(tmp) > 0, tmp$location[1], NA),
+  #                      active = ifelse(nrow(tmp) > 0, 1, 0),
+  #                      stringsAsFactors = FALSE)
+  
+  output
+  
+}
+
+# Find latest status for every scooter
+time_intervals <- seq(from = as.POSIXct("2018-11-15 12:00:00 EDT"), 
+                      to = as.POSIXct("2019-12-15 12:00:00 EDT"),
+                      by = "1 month")
+
+# loop over dates
+LV_rebal_sf_list <- map(time_intervals,
+                        function(x){LV_rebal_sf %>% 
+  mutate(long = st_coordinates(.)[,1],
+         lat = st_coordinates(.)[,2]) %>% 
+  as.data.frame() %>% 
+  split(.$vehicleId) %>% 
+  map(., 
+      function(y){LV_extract_latest_status(y,
+                                           datetime = x,
+                                           # hour = "12:00",
+                                           buffer = 10)}) %>%
+    bind_rows() %>% 
+    mutate(audit_date = x)}) %>%
+  bind_rows()
+
+# Add region for every active scooter
+LV_rebal_sf_list_2 <- LV_rebal_sf_list %>% 
+  filter(!is.na(long),
+         !is.na(lat)) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj, remove = FALSE) %>% 
+  st_join(., LV_distro_areas %>% dplyr::select(Dist_Zone)) %>% 
+  st_drop_geometry() %>% 
+  mutate(Dist_Zone = factor(Dist_Zone,
+                            levels = paste(1:9)))
+
+LV_rebal_sf_list_summary <- LV_rebal_sf_list %>% 
+  left_join(LV_rebal_sf_list_2 %>% dplyr::select(vehicleId, Dist_Zone, audit_date), by = c("vehicleId", "audit_date")) %>% 
+  group_by(audit_date, Dist_Zone, operators, .drop = FALSE) %>% 
+  summarize(scooters = n()) %>% 
+  filter(str_detect(operators, "Bird|Lime"),
+         !is.na(Dist_Zone)) %>%
+  ungroup() %>%
+  group_by(audit_date, operators) %>%
+  mutate(scooter_total = sum(scooters),
+         scooter_pct = scooters / scooter_total)
+
+LV_rebal_sf_list_summary_2 <- LV_rebal_sf_list_summary %>% 
+  dplyr::select(-scooter_pct) %>% 
+  spread(Dist_Zone, scooters, sep = "_") %>% 
+  mutate(Dist_8_pct = ifelse(is.na(Dist_Zone_8 / scooter_total), 0, Dist_Zone_8 / scooter_total), 
+         Dist_1_9_pct = ifelse(is.na((Dist_Zone_1 + Dist_Zone_9) / scooter_total), 0, (Dist_Zone_1 + Dist_Zone_9) / scooter_total),
+         compliance = case_when(scooter_total > 150 & Dist_1_9_pct < 0.2 ~ "No",
+                                scooter_total > 350 & (Dist_1_9_pct < 0.2 | Dist_8_pct < 0.1) ~ "No",
+                                TRUE ~ "Yes"))
+```
+
+Generally, Bird and Lime do not comply with the requirements. The percentage of available scooters in Zones 1, 8, and 9 are much lower than the threshold.
+
+**Internal Note:** Need to account for how vehicle fleet fluctuates according to our metric. If "active" fleet is less than 350 at a given time, Zone 8 requirement doesn't apply.
+
+```{r, cache = TRUE, fig.height = 8, fig.width = 8}
+LV_rebal_sf_list_summary_2_map <- LV_rebal_sf_list_summary_2 %>% 
+  gather(dist_zone, dist_pct, Dist_8_pct:Dist_1_9_pct) %>% 
+  mutate(requirement = case_when(dist_zone == "Dist_8_pct" ~ 0.1,
+                                 dist_zone == "Dist_1_9_pct" ~ 0.2,
+                                 TRUE ~ NA_real_),
+         dist_zone = factor(case_when(dist_zone == "Dist_8_pct" ~ "Dist_8_pct",
+                                      dist_zone == "Dist_1_9_pct" ~ "Dist_1_9_pct",
+                                      TRUE ~ NA_character_),
+                            levels = c("Dist_8_pct", "Dist_1_9_pct"),
+                            labels = c("Zone 8", "Zone 9")))
+
+ggplot(LV_rebal_sf_list_summary_2_map,
+       aes(x = audit_date,
+           y = dist_pct, 
+           fill = operators)) +
+  geom_bar(stat = "identity",
+           position = "dodge") +
+  geom_hline(data = LV_rebal_sf_list_summary_2_map, 
+             aes(yintercept = requirement),
+             color = "red",
+             size = 1) +
+  facet_wrap(operators~dist_zone) +
+  plotTheme +
+  labs(title = "Percentage of Scooters in Distribution Zones",
+       subtitle = "Each audit conducted at mid-day",
+       y = "Percentage of all Scooters",
+       x = "Audit Date")  +
+  scale_x_datetime(date_labels = "%Y-%m-%d",
+                   breaks = LV_rebal_sf_list_summary_2_map$audit_date) + 
+  scale_fill_discrete(name = "Distribution Zone") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+If we map the locations of active scooters on November 15, 2019, we'll see that few of them are located in the required distribution zones.
+
+```{r, cache = TRUE, fig.height = 8, fig.width = 8}
+LV_audit_map <- LV_rebal_sf_list_2 %>% 
+  filter(audit_date == as.POSIXct("2019-11-15 12:00:00 EST")) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj)
+
+ggplot() +
+  geom_sf(data = LV_distro_areas, fill = "lightgray") +  
+  geom_sf(data = LV_audit_map %>% filter(str_detect(operators, "Lime|Bird")),
+          aes(color = operators, fill = operators)) +
+  facet_wrap(~operators, ncol = 1) +
+  mapTheme() +
+  labs(title = "Scooter Location Audit on 11-15-2019",
+       subtitle = "Providers are not meeting their distribution requirements in zones 1, 8, and 9.")
+```
+
 
 ## Opportunity Index
 
@@ -955,9 +1229,13 @@ LV_OI_bymonth <- LV_study.panel %>%
 
 #### Opportunity Index
 
-Opportunity Index = (Rebalance In) + (User Trips In)
+Another way we've conceptualized equity of access to scooters is through an Opportunity Index. We define the OI as:
 
-Aggregated to the week.
+`Opportunity Index = (Rebalance In) + (User Trips In)`
+
+OI is a proxy for the supply of scooters available in a census tract over a certain period of time. It does not take scooter demand in an area into consideration.
+
+Below is OI for all census tracts aggregated over a week in June 2019. Downtown Louisville has the highest supply of scooters irrespective of demand.
 
 ```{r, cache = TRUE}
 ggplot() +
@@ -969,9 +1247,11 @@ ggplot() +
 
 #### Net Scooter Flow
 
-Net Scooter Flow = (Opportunity Index) - (User Trips Out)
+Net Scooter Flow is the Opportunity Index subtracted by User Trips Out. 
 
-Aggregated to the week.
+`Net Scooter Flow = (Opportunity Index) - (User Trips Out)`
+
+The below shows that the census tracts with the highest OI also have the highest Net Scooter Flow.
 
 ```{r, cache = TRUE}
 ggplot() +
@@ -1743,3 +2023,41 @@ ggplot() +
   plotTheme
 
 ```
+
+# Appendix
+
+## Full Louisville Rebalancing Policy
+
+For reference, the full policy is linked and summarized below:
+
+[Link to policy](https://data.louisvilleky.gov/sites/default/files/Dockless_Policy_7_12_2019.pdf)
+
+* Vehicle Limits
+    + General
+        - A total of 8 operators will be permitted to operate within Metro designated operational zones.
+        - Fleet increases subject to general compliance with all policy provisions
+        - Calculations for assessing fleet size increases shall follow this formula:
+          `rides per vehicle per day = total rides / total permitted vehicles`
+    + For Full-Operating Permit Holders
+        - Operators may apply for possible incremental increases of 200 vehicles per month provided that:
+            1. Ridership exceeds 3 rides per vehicle per day on vehicles owned by that operator.
+            2. Issues identified by Metro are being adequately addressed to Metro’s satisfaction
+        - A cap of 1,050 vehicles applies to each operator.
+        - Fleet Reductions:
+            1. If ridership falls below an average of 2 rides per vehicle per day in the preceding month, the operator must remove vehicles from service. The specific number of vehicles to be removed will be determined by Metro based upon the available data and contributing factors (seasonal shifts, etc.).
+        - Cap Extensions
+            1. Vehicle caps may be raised at the discretion of Metro. Considerations factoring into raising the caps are as follows:
+                * Ridership exceeds 5 rides per vehicle per day on average over the preceding month.
+                * Issues identified by Metro are being adequately addressed to Metro’s satisfaction.
+    + Current Limits
+        - Bird - 450 max vehicles/day - launched August 2018 (_According to the data, they launch in August 2019_)
+        - Lime - 450 max vehicles/day - launched November 2018
+        - Bolt - 150 max vehicles/day - launched July 2019
+        - Spin - 150 max vehicles/day - launched August 2019
+* Distribution Requirements
+    >To ensure access to shared mobility transportation options throughout the community, Metro has established distribution zones. Distribution zones are intended to ensure that no singular zone is intentionally over-served or under-served. Operators must comply with distributional requirements. Failure to comply with this provision constitutes a breach of the license and may result in the assessment of fleet size reductions, suspension, or even termination of the license. The duration of any suspension shall be at the sole discretion of Metro but will be no less than 6 months. Terminations shall apply for 1 year.
+    + For operators with 150 permitted vehicles or fewer, there are no distributional requirements.
+        - For operators with permitted fleets ranging in size between 150 and 350 vehicles, 20% of each operator’s vehicles must be located within zones 1 and 9.
+        - Distribution plans within Zones 1 and 9 must be submitted to Metro for approval to ensure adequate accessibility for residents of each zone has been achieved.
+        - For fleets ranging in size between 350 and 1050 vehicles, 20% of each operator’s vehicles must be located within zones 1 and 9 and 10% must be in zone 8.
+        - Distribution plans within Zones 1, 8, and 9 must be submitted to Metro for approval to ensure adequate accessibility for residents of each zone has been achieved.

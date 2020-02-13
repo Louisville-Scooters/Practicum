@@ -355,7 +355,7 @@ LV_extract_latest_status <- function(x, # list of scooter dataframes
     arrange(occurredAt) %>% 
     tail(1) %>% 
     filter(as.numeric(time - occurredAt) <= buffer,
-           reason %in% LV_active_status)
+           reason %in% LV_active_status) # should this also include user pickups?
   
   if(nrow(tmp) > 0) {
     output <- tmp %>% 
@@ -418,7 +418,7 @@ LV_rebal_sf_list_RDS <- file.path(data_directory,
 #         file = LV_rebal_sf_list_RDS)
 
 # Read the saved object with the code below
-LV_rebal_sf_list <- readRDS(LV_rebal_sf_list)
+LV_rebal_sf_list <- readRDS(LV_rebal_sf_list_RDS)
 
 
 # no loop over dates
