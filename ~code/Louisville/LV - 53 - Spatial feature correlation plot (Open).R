@@ -16,8 +16,12 @@ glimpse(LV_spatial_census)
 
 LV_ori_spatial_correlation.long <-
   st_set_geometry(LV_spatial_census, NULL) %>%
-  dplyr::select(origins_cnt, KNN_university, restaurant_density, KNN_retail, KNN_office, tourism_density,
-                leisure_density, total_length, KNN_public_transport) %>%
+  dplyr::select(origins_cnt, KNN_university, KNN_restaurant, KNN_public_transport, 
+                KNN_retail, KNN_office, KNN_tourism, KNN_leisure, count_retail, 
+                density_retail, count_office, density_office, count_leisure,
+                density_leisure, count_tourism, density_tourism,count_pubtran,
+                density_pubtran, count_restaurant, density_restaurant,
+                count_college, density_college, total_length) %>%
   gather(Variable, Value, -origins_cnt )
 
 LV_ori_spatial_correlation.cor <-
@@ -30,5 +34,5 @@ ggplot(LV_ori_spatial_correlation.long, aes(Value, origins_cnt)) +
   geom_text(data = LV_ori_spatial_correlation.cor, aes(label = paste("r =", round(correlation, 2))),
             x=-Inf, y=Inf, vjust = 1, hjust = -.1) +
   geom_smooth(method = "lm", se = FALSE, colour = "gold") +
-  facet_wrap(~Variable, ncol = 4, scales = "free") +
+  facet_wrap(~Variable, ncol = 5, scales = "free") +
   labs(title = "Origin count as a function of spatial factors")
