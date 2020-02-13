@@ -49,6 +49,7 @@ library(gridExtra)
 library(corrplot)
 library(osmdata)
 library(FNN)
+library(janitor)
 #install.packages('osmdata')
 
 # Palettes and Themes

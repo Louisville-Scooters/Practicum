@@ -815,7 +815,7 @@ LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
                 * Ridership exceeds 5 rides per vehicle per day on average over the preceding month.
                 * Issues identified by Metro are being adequately addressed to Metro’s satisfaction.
     + Current Limits
-        - Bird - 450 max vehicles/day - launched August 2018
+        - Bird - 450 max vehicles/day - launched August 2018 (_According to the data, they launch in August 2019_)
         - Lime - 450 max vehicles/day - launched November 2018
         - Bolt - 150 max vehicles/day - launched July 2019
         - Spin - 150 max vehicles/day - launched August 2019

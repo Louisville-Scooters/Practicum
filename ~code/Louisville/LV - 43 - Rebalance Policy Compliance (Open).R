@@ -264,11 +264,13 @@ LV_rebal_rowPairs_operator <- rbind(LV_rebal_user_only_combined_rowPairs_operato
 # summarize inflows and outflows by distribution district
 LV_rebal_rowPairs_operator_outflow <- LV_rebal_rowPairs_operator %>% 
   mutate(Origin_Dist_Zone = as.factor(Origin_Dist_Zone),
-         outflow = ifelse(Origin_Dist_Zone != Dest_Dist_Zone, 1, 0))%>% 
+         outflow = ifelse(Origin_Dist_Zone != Dest_Dist_Zone, 1, 0),
+         in_zone = ifelse(Origin_Dist_Zone == Dest_Dist_Zone, 1, 0)) %>% 
   group_by(as.Date(start_time),
            Origin_Dist_Zone,
            .drop = FALSE) %>% 
-  summarize(outflow = sum(outflow, na.rm = TRUE))
+  summarize(outflow = sum(outflow, na.rm = TRUE),
+            in_zone = sum(in_zone, na.rm = TRUE))
 
 LV_rebal_rowPairs_operator_inflow <- LV_rebal_rowPairs_operator %>% 
   mutate(Dest_Dist_Zone = as.factor(Dest_Dist_Zone),
@@ -280,7 +282,8 @@ LV_rebal_rowPairs_operator_inflow <- LV_rebal_rowPairs_operator %>%
 
 LV_rebal_rowPairs_operator_summary <- LV_rebal_rowPairs_operator_inflow %>% 
   left_join(LV_rebal_rowPairs_operator_outflow,
-            by = c("as.Date(start_time)", "Dest_Dist_Zone" = "Origin_Dist_Zone"))
+            by = c("as.Date(start_time)", "Dest_Dist_Zone" = "Origin_Dist_Zone")) %>% 
+  mutate(total_vehicles = inflow + in_zone - outflow)
   
 LV_rebal_rowPairs_operator %>% filter(Origin_Dist_Zone == Dest_Dist_Zone) %>% nrow()
 LV_rebal_rowPairs_operator %>% filter(Origin_Dist_Zone != Dest_Dist_Zone) %>% nrow()
@@ -307,3 +310,273 @@ nrow(test_open)
 nrow(test_rebal)
 table(test_rebal$reason)
 nrow(test_open) - nrow(test_rebal)/2
+
+lime <- LV_rebal_raw %>% 
+  filter(operators == "Lime Louisville",
+         month(occurredAt) == 6,
+         year(occurredAt) == 2019,
+         day(occurredAt) == 8)
+
+length(unique(lime$vehicleId))
+
+
+########################## NESTED LIST APPROACH ----
+unique(LV_rebal_sf$reason) 
+# [1] "user pick up"         "maintenance"          "rebalance pick up"    "user drop off"        
+# "maintenance pick up"  "rebalance drop off"   "service end"          "service start"        "maintenance drop off"
+# [10] "low battery" 
+
+LV_active_status <- c("user drop off",
+                      "rebalance drop off",
+                      "maintenance drop off",
+                      "service start")
+
+LV_reserved_status <- c("user pick up")
+
+LV_inactive_status <- c("rebalance pick up",
+                        "maintenance pick up",
+                        "service end",
+                        "low battery",
+                        "maintenance")
+
+# Function for finding the last status for every scooter
+LV_extract_latest_status <- function(x, # list of scooter dataframes
+                                     datetime, # format = "YYYY-MM-DD HH:MM"
+                                     # hour, # format = "HH:MM" in 24 hour time
+                                     buffer # of days since last activity that we're willing to consider a scooter still active. 
+){
+  
+  time <- as.POSIXct(datetime)
+  
+  # tolerance <- buffer * 60*60*24
+  
+  tmp <-  x %>% 
+    as.data.frame() %>% 
+    dplyr::select(vehicleId, occurredAt, reason, operators, location, long, lat) %>% 
+    filter(occurredAt <= time,
+           reason %in% LV_active_status) %>% 
+    arrange(occurredAt) %>% 
+    tail(1) %>% 
+    filter(as.numeric(time - occurredAt) <= buffer)
+  
+  if(nrow(tmp) > 0) {
+    output <- tmp %>% 
+      mutate(Date = as.Date(occurredAt),
+             Hour = hour(occurredAt),
+             active = 1) %>% 
+      dplyr::select(vehicleId, Date, Hour, operators, active, long, lat)
+    
+  } else {
+    
+    output <- data.frame(vehicleId = x$vehicleId[1],
+                         Date = as.Date(time),
+                         Hour = hour(time),
+                         operators = x$operators[1],
+                         active = 0,
+                         long = NA_real_,
+                         lat = NA_real_,
+                         stringsAsFactors = FALSE)
+  }
+  
+  # output <- data.frame(Date = as.Date(time),
+  #                      Hour = hour(time),
+  #                      vehicleId = df$vehicleId[1],
+  #                      operators = df$vehicleId[1],
+  #                      location = ifelse(nrow(tmp) > 0, tmp$location[1], NA),
+  #                      active = ifelse(nrow(tmp) > 0, 1, 0),
+  #                      stringsAsFactors = FALSE)
+  
+  output
+  
+}
+
+
+
+# Find latest status for every scooter
+time_intervals <- seq(from = as.POSIXct("2018-11-15 12:00:00 EDT"), 
+                      to = as.POSIXct("2019-12-15 12:00:00 EDT"),
+                      by = "1 month")
+
+# loop over dates
+LV_rebal_sf_list <- map(time_intervals,
+                        function(x){LV_rebal_sf %>% 
+  mutate(long = st_coordinates(.)[,1],
+         lat = st_coordinates(.)[,2]) %>% 
+  as.data.frame() %>% 
+  split(.$vehicleId) %>% 
+  map(., 
+      function(y){LV_extract_latest_status(y,
+                                           datetime = x,
+                                           # hour = "12:00",
+                                           buffer = 10)}) %>%
+    bind_rows() %>% 
+    mutate(audit_date = x)}) %>%
+  bind_rows()
+
+LV_rebal_sf_list_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_rebal_sf_list")
+
+# saveRDS(LV_rebal_sf_list,
+#         file = LV_rebal_sf_list_RDS)
+
+# Read the saved object with the code below
+LV_rebal_sf_list <- readRDS(LV_rebal_sf_list)
+
+
+# no loop over dates
+# LV_rebal_sf_list <- LV_rebal_sf %>% 
+#                           mutate(long = st_coordinates(.)[,1],
+#                                  lat = st_coordinates(.)[,2]) %>% 
+#                           as.data.frame() %>% 
+#                           split(.$vehicleId) %>% 
+#                           map(., 
+#                               LV_extract_latest_status,
+#                               datetime = "2019-10-01 12:00:00 EDT",
+#                               # hour = "12:00",
+#                               buffer = 10) %>% 
+#                           bind_rows() %>% 
+#                           mutate(audit_date = as.Date("2019-10-01 12:00:00 EDT"))
+
+# Add region for every active scooter
+LV_rebal_sf_list_2 <- LV_rebal_sf_list %>% 
+  filter(!is.na(long),
+         !is.na(lat)) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj, remove = FALSE) %>% 
+  st_join(., LV_distro_areas %>% dplyr::select(Dist_Zone)) %>% 
+  st_drop_geometry() %>% 
+  mutate(Dist_Zone = factor(Dist_Zone,
+                            levels = paste(1:9)))
+
+LV_rebal_sf_list_summary <- LV_rebal_sf_list %>% 
+  left_join(LV_rebal_sf_list_2 %>% dplyr::select(vehicleId, Dist_Zone, audit_date), by = c("vehicleId", "audit_date")) %>% 
+  group_by(audit_date, Dist_Zone, operators, .drop = FALSE) %>% 
+  summarize(scooters = n()) %>% 
+  filter(str_detect(operators, "Bird|Lime"),
+         !is.na(Dist_Zone)) %>%
+  ungroup() %>%
+  group_by(audit_date, operators) %>%
+  mutate(scooter_total = sum(scooters),
+         scooter_pct = scooters / scooter_total)
+
+LV_rebal_sf_list_summary_2 <- LV_rebal_sf_list_summary %>% 
+  dplyr::select(-scooter_pct) %>% 
+  spread(Dist_Zone, scooters, sep = "_") %>% 
+  mutate(Dist_8_pct = ifelse(is.na(Dist_Zone_8 / scooter_total), 0, Dist_Zone_8 / scooter_total), 
+         Dist_1_9_pct = ifelse(is.na((Dist_Zone_1 + Dist_Zone_9) / scooter_total), 0, (Dist_Zone_1 + Dist_Zone_9) / scooter_total),
+         compliance = case_when(scooter_total > 150 & Dist_1_9_pct < 0.2 ~ "No",
+                                scooter_total > 350 & (Dist_1_9_pct < 0.2 | Dist_8_pct < 0.1) ~ "No",
+                                TRUE ~ "Yes"))
+
+
+
+# Look at Bird and Lime
+# LV_rebal_audit <- LV_rebal_sf_list_summary %>% 
+#   dplyr::select(audit_date, Dist_Zone, `Bird Louisville`, `Lime Louisville`) %>% 
+#   ungroup() %>% 
+#   group_by(audit_date) %>% 
+#   mutate(Bird_total = sum(`Bird Louisville`),
+#          Lime_total = sum(`Lime Louisville`),
+#          Bird_pct = `Bird Louisville` / Bird_total,
+#          Lime_pct = `Lime Louisville` / Lime_total)
+
+# Zone 1 and 9
+LV_zone1_9 <- ggplot(LV_rebal_sf_list_summary %>% filter(Dist_Zone %in% c("1", "9")),
+       aes(x = Dist_Zone,
+           y = scooter_pct,
+           fill = operators)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_hline(yintercept = 0.2, color = "red", size = 2) +
+  facet_wrap(audit_date~operators) +
+  plotTheme +
+  labs(title = "Zones 1 and 9 - Allocation of Available Scooters",
+       subtitle = "10% of available scooters must be in Zones 1 and 9.")
+
+LV_zone8 <- ggplot(LV_rebal_sf_list_summary %>% filter(Dist_Zone %in% c("8")),
+                     aes(x = Dist_Zone,
+                         y = scooter_pct,
+                         fill = operators)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_hline(yintercept = 0.1, color = "red", size = 2) +
+  facet_wrap(audit_date~operators) +
+  plotTheme +
+  labs(title = "Zone 8 - Allocation of Available Scooters",
+       subtitle = "10% of available scooters must be in Zone 8.")
+
+LV_all_zones <- ggplot(LV_rebal_sf_list_summary %>% filter(!Dist_Zone %in% c("1", "8", "9")),
+                       aes(x = Dist_Zone,
+                           y = scooter_pct,
+                           fill = operators)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  # geom_hline(yintercept = 0.1, color = "red", size = 2) +
+  facet_wrap(audit_date~operators) +
+  plotTheme +
+  labs(title = "Zones 2 to 7 - Allocation of Available Scooters",
+       subtitle = "These zones have no allocation requirements.")
+
+LV_all_zones <- ggplot(LV_rebal_sf_list_summary,
+                       aes(x = audit_date,
+                           y = scooter_pct,
+                           fill = operators,
+                           group = Dist_Zone)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  # geom_hline(yintercept = 0.1, color = "red", size = 2) +
+  # facet_wrap(audit_date~operators) +
+  plotTheme +
+  labs(title = "Zones 2 to 7 - Allocation of Available Scooters",
+       subtitle = "These zones have no allocation requirements.")
+
+LV_rebal_sf_list_summary_map <- LV_rebal_sf_list_summary %>% 
+  ungroup() %>% 
+  group_by(Dist_Zone, operators) %>% 
+  summarize(scooter_pct = mean(scooter_pct, na.rm = TRUE)) %>% 
+  left_join(LV_distro_areas, by = "Dist_Zone") %>% 
+  st_as_sf() %>% 
+  arrange(operators)
+
+tm_shape(LV_rebal_sf_list_summary_map) + tm_polygons(col = "scooter_pct")
+
+# map of distro areas with requirements
+LV_distro_areas_map <- LV_distro_areas %>% 
+  mutate(Dist_Zone2 = case_when(Dist_Zone %in% c(1, 9) ~ "Zones 1 and 9 (20%)",
+                                Dist_Zone == 8 ~ "Zone 8 (10%)",
+                                TRUE ~ NA_character_))
+
+ggplot() +
+  geom_sf(data = LV_distro_areas_map, aes(fill = Dist_Zone2)) +
+  scale_fill_viridis_d(limits = c("Zones 1 and 9 (20%)", "Zone 8 (10%)"),
+                       direction = -1, 
+                       na.translate = FALSE) +
+  mapTheme() +
+  labs(title = "Scooter Rebalancing Requirements in Louisville")
+
+LV_rebal_sf_list_summary_2_map <- LV_rebal_sf_list_summary_2 %>% 
+  gather(dist_zone, dist_pct, Dist_8_pct:Dist_1_9_pct) %>% 
+  mutate(requirement = case_when(dist_zone == "Dist_8_pct" ~ 0.1,
+                                 dist_zone == "Dist_1_9_pct" ~ 0.2,
+                                 TRUE ~ NA_real_),
+         dist_zone = factor(case_when(dist_zone == "Dist_8_pct" ~ "Dist_8_pct",
+                                      dist_zone == "Dist_1_9_pct" ~ "Dist_1_9_pct",
+                                      TRUE ~ NA_character_),
+                            levels = c("Dist_8_pct", "Dist_1_9_pct"),
+                            labels = c("Zone 8", "Zone 9")))
+
+ggplot(LV_rebal_sf_list_summary_2_map,
+       aes(x = audit_date,
+           y = dist_pct, 
+           fill = dist_zone)) +
+  geom_bar(stat = "identity",
+           position = "dodge") +
+  geom_hline(data = LV_rebal_sf_list_summary_2_map, 
+             aes(yintercept = requirement),
+             color = "red",
+             size = 1) +
+  facet_wrap(operators~dist_zone) +
+  plotTheme +
+  labs(title = "Percentage of Scooters in Distribution Zones",
+       subtitle = "Each audit conducted at mid-day",
+       y = "Percentage of all Scooters",
+       x = "Audit Date")  +
+  scale_x_datetime(date_labels = "%Y-%m-%d",
+                   breaks = LV_rebal_sf_list_summary_2_map$audit_date) + 
+  scale_fill_discrete(name = "Distribution Zone") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
