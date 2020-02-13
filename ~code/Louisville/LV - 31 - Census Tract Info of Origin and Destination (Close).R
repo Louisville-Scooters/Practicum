@@ -37,15 +37,11 @@ LV_rebal_user_only_0619_combined_rowPairs$lat_s <- as.numeric(LV_rebal_user_only
 LV_rebal_user_only_0619_combined_rowPairs$lon_d <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lon_d)
 LV_rebal_user_only_0619_combined_rowPairs$lat_d <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lat_d)
 
-LV_rebal_user_only_0619_combined_rowPairs_sf <- st_as_sf(LV_rebal_user_only_0619_combined_rowPairs, coords = c('lon_s','lat_s'),crs=LV_proj) %>%
-  mutate(lon_s = unlist(map(geometry, 1)),
-         lat_s = unlist(map(geometry, 2)))
+LV_rebal_user_only_0619_combined_rowPairs_sf <- st_as_sf(LV_rebal_user_only_0619_combined_rowPairs, sf_column_name = "trip_origin", crs=LV_proj)
 LV_rebal_user_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_user_only_0619_combined_rowPairs_sf, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
   rename(Start.Census.Tract=GEOID)
 
-LV_rebal_user_only_0619_combined_rowPairs_ct <- st_as_sf(as.data.frame(LV_rebal_user_only_0619_combined_rowPairs_ct) %>% dplyr::select(-geometry), coords = c('lon_d','lat_d'),crs=LV_proj) %>%
-  mutate(lon_d = unlist(map(geometry, 1)),
-         lat_d = unlist(map(geometry, 2)))
+LV_rebal_user_only_0619_combined_rowPairs_ct <- st_as_sf(as.data.frame(LV_rebal_user_only_0619_combined_rowPairs_ct), sf_column_name = "trip_dest",crs=LV_proj)
 LV_rebal_user_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_user_only_0619_combined_rowPairs_ct, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
   rename(End.Census.Tract=GEOID)
 
@@ -80,15 +76,11 @@ LV_rebal_reb_only_0619_combined_rowPairs$lat_s <- as.numeric(LV_rebal_reb_only_0
 LV_rebal_reb_only_0619_combined_rowPairs$lon_d <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lon_d)
 LV_rebal_reb_only_0619_combined_rowPairs$lat_d <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lat_d)
 
-LV_rebal_reb_only_0619_combined_rowPairs_sf <- st_as_sf(LV_rebal_reb_only_0619_combined_rowPairs, coords = c('lon_s','lat_s'),crs=LV_proj) %>%
-  mutate(lon_s = unlist(map(geometry, 1)),
-         lat_s = unlist(map(geometry, 2)))
+LV_rebal_reb_only_0619_combined_rowPairs_sf <- st_as_sf(LV_rebal_reb_only_0619_combined_rowPairs, sf_column_name = "trip_origin",crs=LV_proj)
 LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_reb_only_0619_combined_rowPairs_sf, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
   rename(Start.Census.Tract=GEOID)
 
-LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_as_sf(as.data.frame(LV_rebal_reb_only_0619_combined_rowPairs_ct) %>% dplyr::select(-geometry), coords = c('lon_d','lat_d'),crs=LV_proj) %>%
-  mutate(lon_d = unlist(map(geometry, 1)),
-         lat_d = unlist(map(geometry, 2)))
+LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_as_sf(as.data.frame(LV_rebal_reb_only_0619_combined_rowPairs_ct), sf_column_name = "trip_dest",crs=LV_proj)
 LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_reb_only_0619_combined_rowPairs_ct, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
   rename(End.Census.Tract=GEOID)
 
