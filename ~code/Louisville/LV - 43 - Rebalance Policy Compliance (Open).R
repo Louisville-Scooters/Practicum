@@ -339,7 +339,7 @@ LV_inactive_status <- c("rebalance pick up",
                         "low battery",
                         "maintenance")
 
-# Function for finding the last status for every scooter
+# Function for finding the last status for every scooter 
 LV_extract_latest_status <- function(x, # list of scooter dataframes
                                      datetime, # format = "YYYY-MM-DD HH:MM"
                                      # hour, # format = "HH:MM" in 24 hour time
@@ -351,11 +351,11 @@ LV_extract_latest_status <- function(x, # list of scooter dataframes
   tmp <-  x %>% 
     as.data.frame() %>% 
     dplyr::select(vehicleId, occurredAt, reason, operators, location, long, lat) %>% 
-    filter(occurredAt <= time,
-           reason %in% LV_active_status) %>% # is this correct?
+    filter(occurredAt <= time) %>% # can we replace this with the buffer call below?
     arrange(occurredAt) %>% 
     tail(1) %>% 
-    filter(as.numeric(time - occurredAt) <= buffer)
+    filter(as.numeric(time - occurredAt) <= buffer,
+           reason %in% LV_active_status)
   
   if(nrow(tmp) > 0) {
     output <- tmp %>% 
@@ -478,50 +478,50 @@ LV_rebal_sf_list_summary_2 <- LV_rebal_sf_list_summary %>%
 #          Lime_pct = `Lime Louisville` / Lime_total)
 
 # Zone 1 and 9
-LV_zone1_9 <- ggplot(LV_rebal_sf_list_summary %>% filter(Dist_Zone %in% c("1", "9")),
-       aes(x = Dist_Zone,
-           y = scooter_pct,
-           fill = operators)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_hline(yintercept = 0.2, color = "red", size = 2) +
-  facet_wrap(audit_date~operators) +
-  plotTheme +
-  labs(title = "Zones 1 and 9 - Allocation of Available Scooters",
-       subtitle = "10% of available scooters must be in Zones 1 and 9.")
-
-LV_zone8 <- ggplot(LV_rebal_sf_list_summary %>% filter(Dist_Zone %in% c("8")),
-                     aes(x = Dist_Zone,
-                         y = scooter_pct,
-                         fill = operators)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_hline(yintercept = 0.1, color = "red", size = 2) +
-  facet_wrap(audit_date~operators) +
-  plotTheme +
-  labs(title = "Zone 8 - Allocation of Available Scooters",
-       subtitle = "10% of available scooters must be in Zone 8.")
-
-LV_all_zones <- ggplot(LV_rebal_sf_list_summary %>% filter(!Dist_Zone %in% c("1", "8", "9")),
-                       aes(x = Dist_Zone,
-                           y = scooter_pct,
-                           fill = operators)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  # geom_hline(yintercept = 0.1, color = "red", size = 2) +
-  facet_wrap(audit_date~operators) +
-  plotTheme +
-  labs(title = "Zones 2 to 7 - Allocation of Available Scooters",
-       subtitle = "These zones have no allocation requirements.")
-
-LV_all_zones <- ggplot(LV_rebal_sf_list_summary,
-                       aes(x = audit_date,
-                           y = scooter_pct,
-                           fill = operators,
-                           group = Dist_Zone)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  # geom_hline(yintercept = 0.1, color = "red", size = 2) +
-  # facet_wrap(audit_date~operators) +
-  plotTheme +
-  labs(title = "Zones 2 to 7 - Allocation of Available Scooters",
-       subtitle = "These zones have no allocation requirements.")
+# LV_zone1_9 <- ggplot(LV_rebal_sf_list_summary %>% filter(Dist_Zone %in% c("1", "9")),
+#        aes(x = Dist_Zone,
+#            y = scooter_pct,
+#            fill = operators)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   geom_hline(yintercept = 0.2, color = "red", size = 2) +
+#   facet_wrap(audit_date~operators) +
+#   plotTheme +
+#   labs(title = "Zones 1 and 9 - Allocation of Available Scooters",
+#        subtitle = "10% of available scooters must be in Zones 1 and 9.")
+# 
+# LV_zone8 <- ggplot(LV_rebal_sf_list_summary %>% filter(Dist_Zone %in% c("8")),
+#                      aes(x = Dist_Zone,
+#                          y = scooter_pct,
+#                          fill = operators)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   geom_hline(yintercept = 0.1, color = "red", size = 2) +
+#   facet_wrap(audit_date~operators) +
+#   plotTheme +
+#   labs(title = "Zone 8 - Allocation of Available Scooters",
+#        subtitle = "10% of available scooters must be in Zone 8.")
+# 
+# LV_all_zones <- ggplot(LV_rebal_sf_list_summary %>% filter(!Dist_Zone %in% c("1", "8", "9")),
+#                        aes(x = Dist_Zone,
+#                            y = scooter_pct,
+#                            fill = operators)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   # geom_hline(yintercept = 0.1, color = "red", size = 2) +
+#   facet_wrap(audit_date~operators) +
+#   plotTheme +
+#   labs(title = "Zones 2 to 7 - Allocation of Available Scooters",
+#        subtitle = "These zones have no allocation requirements.")
+# 
+# LV_all_zones <- ggplot(LV_rebal_sf_list_summary,
+#                        aes(x = audit_date,
+#                            y = scooter_pct,
+#                            fill = operators,
+#                            group = Dist_Zone)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   # geom_hline(yintercept = 0.1, color = "red", size = 2) +
+#   # facet_wrap(audit_date~operators) +
+#   plotTheme +
+#   labs(title = "Zones 2 to 7 - Allocation of Available Scooters",
+#        subtitle = "These zones have no allocation requirements.")
 
 LV_rebal_sf_list_summary_map <- LV_rebal_sf_list_summary %>% 
   ungroup() %>% 
@@ -561,7 +561,7 @@ LV_rebal_sf_list_summary_2_map <- LV_rebal_sf_list_summary_2 %>%
 ggplot(LV_rebal_sf_list_summary_2_map,
        aes(x = audit_date,
            y = dist_pct, 
-           fill = dist_zone)) +
+           fill = operators)) +
   geom_bar(stat = "identity",
            position = "dodge") +
   geom_hline(data = LV_rebal_sf_list_summary_2_map, 
@@ -578,3 +578,16 @@ ggplot(LV_rebal_sf_list_summary_2_map,
                    breaks = LV_rebal_sf_list_summary_2_map$audit_date) + 
   scale_fill_discrete(name = "Distribution Zone") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+LV_audit_map <- LV_rebal_sf_list_2 %>% 
+  filter(audit_date == as.POSIXct("2019-11-15 12:00:00 EST")) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj)
+
+ggplot() +
+  geom_sf(data = LV_distro_areas, fill = "lightgray") +  
+  geom_sf(data = LV_audit_map %>% filter(str_detect(operators, "Lime|Bird")),
+          aes(color = operators, fill = operators)) +
+  facet_wrap(~operators, ncol = 1) +
+  mapTheme() +
+  labs(title = "Scooter Location Audit on 11-15-2019",
+       subtitle = "Providers are not meeting their distribution requirements in zones 1, 8, and 9.")
