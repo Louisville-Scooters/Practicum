@@ -7,6 +7,11 @@
 ##########################################################################
 
 # plot by day of week
+# LV_rebal_user_only_0619_combined_rowPairs obtained by running
+LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+
+# plotting
 LV_rebal_user_only_0619_combined_rowPairs$start_time <- with_tz(LV_rebal_user_only_0619_combined_rowPairs$start_time,tz='EST')
 ggplot(LV_rebal_user_only_0619_combined_rowPairs %>% mutate(hour = hour(start_time), dotw= weekdays(start_time)))+
     geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
