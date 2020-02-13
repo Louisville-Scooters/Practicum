@@ -129,10 +129,16 @@ LV_OI_bymonth <- LV_study.panel %>%
   left_join(LV_Census_geoinfo, by = c('End.Census.Tract' = 'GEOID'))
 
 ggplot() +
-  geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = diff)) +
+  geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = mean_OI)) +
   scale_fill_viridis() +
   mapTheme() +
   labs(title = "Opportunity Index by Census Tract in Louisville")
+
+ggplot() +
+  geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = diff)) +
+  scale_fill_viridis() +
+  mapTheme() +
+  labs(title = "Net Flow by Census Tract in Louisville")
 
 ggplot() +
   geom_sf(data = LV_OI_bymonth %>% st_as_sf(), aes(fill = ratio)) +
