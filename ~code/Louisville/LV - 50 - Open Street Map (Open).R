@@ -144,6 +144,32 @@ LV_tourism <- st_geometry(LV_tourism$osm_points) %>%
   dplyr::select(Legend, City, geometry)
 
 ## code to plot and check the OSM data
-# ggplot()+
-#   geom_sf(data = LV_office)+
-#   geom_sf(data = LV_SA,fill='transparent')
+grid.arrange(
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+  geom_sf(data = LV_leisure, color = "lightsalmon",alpha = 0.6)+
+  geom_sf(data = LV_SA,fill='transparent')+
+  labs(title = "Location of cycleway and leisure places in Louisville",
+       subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+  mapTheme(),
+
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_restaurant, color = "turquoise",alpha = 0.6)+
+  geom_sf(data = LV_tourism, color = "hotpink", alpha = 0.6)+
+  geom_sf(data = LV_SA,fill='transparent')+
+  labs(title = "Location of restaurant and tourism spots in Louisville",
+       subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+  mapTheme(),
+
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_office, color = "indianred2", alpha = 0.6, size = 2)+
+  geom_sf(data = LV_retail, color = "orange", alpha = 0.6, size = 2)+
+  geom_sf(data = LV_college%>%st_intersection(LV_SA), shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = LV_SA,fill='transparent')+
+  labs(title = "Location of offices, retails, and colleges in Louisville",
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme(),
+ncol = 3)
