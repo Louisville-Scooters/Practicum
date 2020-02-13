@@ -348,13 +348,11 @@ LV_extract_latest_status <- function(x, # list of scooter dataframes
   
   time <- as.POSIXct(datetime)
   
-  # tolerance <- buffer * 60*60*24
-  
   tmp <-  x %>% 
     as.data.frame() %>% 
     dplyr::select(vehicleId, occurredAt, reason, operators, location, long, lat) %>% 
     filter(occurredAt <= time,
-           reason %in% LV_active_status) %>% 
+           reason %in% LV_active_status) %>% # is this correct?
     arrange(occurredAt) %>% 
     tail(1) %>% 
     filter(as.numeric(time - occurredAt) <= buffer)
