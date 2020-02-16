@@ -38,9 +38,6 @@
 # LV_college_dist <- get.knnx(coordinates(LV_college_coord), coordinates(LV_census_centroid),k=1)
 # LV_college_dist <- as.data.frame(lapply(LV_college_dist, unlist))
 
-
-
-
 LV_college <- st_read(file.path(data_directory,
                                         "Ky_Colleges_Universities/Ky_Colleges_Universities.shp"))
 LV_college <- LV_college %>%
@@ -49,6 +46,19 @@ LV_college <- LV_college %>%
 
 ### XINYI'S CODE ####
 ### using osm to grab data####
+# LV_college <- opq ("Louisville USA") %>%
+#   add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+#   osmdata_sf(.)
+# 
+# LV_college <- st_geometry(LV_college$osm_points) %>%
+#   st_transform(LV_proj) %>%
+#   st_sf() %>%
+#   st_intersection(LV_SA) %>%
+#   mutate(Legend = 'University',
+#          City = 'Louisville') %>%
+#   dplyr::select(Legend, City, geometry)
+
+Get_OSM <- function ()
 
 # restaurant ####
 LV_restaurant <- opq ("Louisville USA") %>%
@@ -78,7 +88,7 @@ LV_public_transport <- st_geometry(LV_public_transport$osm_points) %>%
 
 # retail ####
 LV_retail <- opq ("Louisville USA") %>%
-  add_osm_feature(key = 'building', value = "retail") %>%
+  add_osm_feature(key = 'shop') %>%
   osmdata_sf(.)
 
 LV_retail <- st_geometry(LV_retail$osm_points) %>%
@@ -91,7 +101,7 @@ LV_retail <- st_geometry(LV_retail$osm_points) %>%
 
 # office ####
 LV_office <- opq ("Louisville USA") %>%
-  add_osm_feature(key = 'building', value = "office") %>%
+  add_osm_feature(key = 'office') %>%
   osmdata_sf(.)
 
 LV_office <- st_geometry(LV_office$osm_points) %>%
