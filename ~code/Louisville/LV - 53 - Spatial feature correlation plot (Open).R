@@ -16,7 +16,7 @@ glimpse(LV_spatial_census)
 
 LV_ori_spatial_correlation.long <-
   st_set_geometry(LV_spatial_census, NULL) %>%
-  dplyr::select(origins_cnt, KNN_university, KNN_restaurant, KNN_public_transport, 
+  dplyr::select(origins_cnt, KNN_college, KNN_restaurant, KNN_public_transport, 
                 KNN_retail, KNN_office, KNN_tourism, KNN_leisure, count_retail, 
                 density_retail, count_office, density_office, count_leisure,
                 density_leisure, count_tourism, density_tourism,count_pubtran,

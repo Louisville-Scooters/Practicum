@@ -42,21 +42,31 @@ LV_college <- st_read(file.path(data_directory,
                                         "Ky_Colleges_Universities/Ky_Colleges_Universities.shp"))
 LV_college <- LV_college %>%
  filter(City == 'Louisville') %>%
- st_transform(LV_proj)
+  st_intersection(LV_SA)%>%
+  st_transform(LV_proj)
 
 ### XINYI'S CODE ####
 ### using osm to grab data####
-# LV_college <- opq ("Louisville USA") %>%
-#   add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
-#   osmdata_sf(.)
+ LV_college2 <- opq ("Louisville USA") %>%
+   add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+   osmdata_sf(.)
 # 
-# LV_college <- st_geometry(LV_college$osm_points) %>%
-#   st_transform(LV_proj) %>%
-#   st_sf() %>%
-#   st_intersection(LV_SA) %>%
-#   mutate(Legend = 'University',
-#          City = 'Louisville') %>%
-#   dplyr::select(Legend, City, geometry)
+LV_college2 <- st_geometry(LV_college2$osm_points) %>%
+   st_transform(LV_proj) %>%
+   st_sf() %>%
+   st_intersection(LV_SA) %>%
+   mutate(Legend = 'College',
+          City = 'Louisville') %>%
+   dplyr::select(Legend, City, geometry)
+
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = LV_college2, color = "red", size = 1.5)+
+  geom_sf(data = LV_SA, fill='transparent')+
+  labs(title = "Location of offices, retails, and colleges in Louisville",
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
 
 Get_OSM <- function ()
 

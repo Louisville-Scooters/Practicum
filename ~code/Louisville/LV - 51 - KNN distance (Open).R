@@ -32,7 +32,7 @@ nn_function <- function(measureFrom,measureTo,k) {
   return(output)  
 }
 # knn for each spatial effects ####
-LV_Census_panel$KNN_university <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+LV_Census_panel$KNN_college <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
                                               coordinates(LV_college %>% st_coordinates()),
                                               1)
 ggplot() +

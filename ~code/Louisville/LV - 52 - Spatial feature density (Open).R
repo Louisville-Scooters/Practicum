@@ -115,6 +115,6 @@ LV_spatial_panel <- readRDS(LV_spatial_panel_RDS)
 LV_spatial_census <- left_join(LV_spatial_panel, LV_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
 
 LV_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_census")
- saveRDS(LV_spatial_census,
-        file = LV_spatial_census_RDS)
+# saveRDS(LV_spatial_census,
+#        file = LV_spatial_census_RDS)
 LV_spatial_census <- readRDS(LV_spatial_census_RDS)
