@@ -50,6 +50,7 @@ library(corrplot)
 library(osmdata)
 library(FNN)
 library(janitor)
+library(caret)
 #install.packages('osmdata')
 
 # Palettes and Themes
