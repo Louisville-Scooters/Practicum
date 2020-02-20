@@ -376,14 +376,6 @@ LV_extract_latest_status <- function(x, # list of scooter dataframes
                          stringsAsFactors = FALSE)
   }
   
-  # output <- data.frame(Date = as.Date(time),
-  #                      Hour = hour(time),
-  #                      vehicleId = df$vehicleId[1],
-  #                      operators = df$vehicleId[1],
-  #                      location = ifelse(nrow(tmp) > 0, tmp$location[1], NA),
-  #                      active = ifelse(nrow(tmp) > 0, 1, 0),
-  #                      stringsAsFactors = FALSE)
-  
   output
   
 }
@@ -396,8 +388,32 @@ time_intervals <- seq(from = as.POSIXct("2018-11-15 12:00:00 EDT"),
                       by = "1 month")
 
 # loop over dates
+library(sf)
+library(tidyverse)
+library(lubridate)
+library(microbenchmark)
+
+LV_rebal_sf_sample <- readRDS("~archive/LV_rebal_sf_sample")
+
+microbenchmark(map(time_intervals,
+                   function(x){LV_rebal_sf_sample %>% 
+                       mutate(long = st_coordinates(.)[,1],
+                              lat = st_coordinates(.)[,2]) %>% 
+                       as.data.frame() %>% 
+                       split(.$vehicleId) %>% 
+                       map(., 
+                           function(y){LV_extract_latest_status(y,
+                                                                datetime = x,
+                                                                # hour = "12:00",
+                                                                buffer = 10)}) %>%
+                       bind_rows() %>% 
+                       mutate(audit_date = x)}) %>%
+                 bind_rows(),
+               times = 10)
+
+
 LV_rebal_sf_list <- map(time_intervals,
-                        function(x){LV_rebal_sf %>% 
+                        function(x){LV_rebal_sf_sample %>% 
   mutate(long = st_coordinates(.)[,1],
          lat = st_coordinates(.)[,2]) %>% 
   as.data.frame() %>% 
