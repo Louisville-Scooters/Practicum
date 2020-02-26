@@ -17,11 +17,16 @@ CH_scooter_clean <- CH_scooter_raw[!is.na(CH_scooter_raw$`Start Centroid Locatio
 CH_scooter_clean <- CH_scooter_clean[!is.na(CH_scooter_clean$`End Centroid Location`),]
 CH_scooter_clean$`Start Time` <- as.POSIXct(CH_scooter_clean$`Start Time`, format='%m/%d/%Y %I:%M:%S %p')
 CH_scooter_clean$`End Time` <- as.POSIXct(CH_scooter_clean$`End Time`, format='%m/%d/%Y %I:%M:%S %p')
+names(CH_scooter_clean)
 
-CH_scooter_0619 <- CH_scooter_clean %>%
+CH_scooter_clean_ori <- st_as_sf(CH_scooter_clean, coords = c("Start Centroid Longitude", "Start Centroid Latitude"), 
+                 crs = 4326) %>% 
+  st_transform(CH_proj)
+
+CH_scooter_0619 <- CH_scooter_clean_ori %>%
   filter(month(`Start Time`) == 6)
 
-CH_scooter_0819 <- CH_scooter_clean %>%
+CH_scooter_0819 <- CH_scooter_clean_ori %>%
   filter(month(`Start Time`) == 8)
 
 # Read city boundary shapefile 
