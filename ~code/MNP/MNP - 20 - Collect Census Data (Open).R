@@ -33,4 +33,3 @@ MNP_Census_geoinfo <- MNP_Census_raw %>%
 MNP_Census_geoinfo <- MNP_Census_geoinfo %>% 
   mutate(centroid_X = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 1],
          centroid_Y = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 2])
-

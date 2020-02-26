@@ -49,13 +49,16 @@ MNP_scooter_0619 <- MNP_scooter_data %>%
   filter(dataset == "/Motorized_Foot_Scooter_Trips_June_2019")
 
 # Join geographical information based on street centerline
-MNP_scooter_0619_sf <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
+MNP_scooter_0619_ori <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
 
-MNP_scooter_0619_sf <- st_as_sf(MNP_scooter_0619_sf, crs = MNP_proj)
-MNP_scooter_0619_sf$endcenterlineid <- as.character(as.integer(MNP_scooter_0619_sf$endcenterlineid))
-#still cannot join endcenterline id
-MNP_scooter_0619_final <- merge(MNP_scooter_0619_sf %>% st_drop_geometry(), 
-                                MNP_street_centroid %>% dplyr::select(GBSID, geometry), by.x = 'endcenterlineid', by.y = 'GBSID')
-filter(MNP_scooter_0619_sf, is.na(MNP_scooter_0619_sf$endcenterlineid))
+MNP_scooter_0619_ori <- st_as_sf(MNP_scooter_0619_ori, sf_column_name = 'geometry', crs=MNP_proj)
 
-head(MNP_scooter_0619_sf$endcenterlineid)
+##############
+# MNP_scooter_0619_ori$endcenterlineid <- as.character(as.integer(MNP_scooter_0619_ori$endcenterlineid))
+# #still cannot join endcenterline id
+# MNP_scooter_0619_final <- merge(MNP_scooter_0619_sf %>% st_drop_geometry(), 
+#                                 MNP_street_centroid %>% dplyr::select(GBSID, geometry), by.x = 'endcenterlineid', by.y = 'GBSID')
+# filter(MNP_scooter_0619_sf, is.na(MNP_scooter_0619_sf$endcenterlineid))
+# 
+# head(MNP_scooter_0619_sf$endcenterlineid)
+

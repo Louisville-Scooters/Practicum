@@ -36,7 +36,7 @@ LV_Census_panel$KNN_college <- nn_function(coordinates(as.data.frame(LV_Census_p
                                               coordinates(LV_college %>% st_coordinates()),
                                               1)
 ggplot() +
-  geom_sf(data=LV_Census_panel ,aes(fill=KNN_university))+
+  geom_sf(data=LV_Census_panel ,aes(fill=KNN_college))+
   scale_fill_viridis(direction = -1)
 
 LV_Census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),

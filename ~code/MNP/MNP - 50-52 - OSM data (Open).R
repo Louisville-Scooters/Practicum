@@ -1,5 +1,5 @@
 ##########################################################################
-# This script is for quering data from OpenStreetMap for LV
+# This script is for quering data from OpenStreetMap for MNP
 # List of spatial features:
 # University (KNN, 1)
 # Restaurant (density)
@@ -11,13 +11,20 @@
 # Public_transport station (KNN, 5)
 
 #********************* the variables******************####
-city_name = "Austin"                              ####
-proj = AU_proj # city projection                         ####
-boundary = AU_Census_geoinfo # service area boundary              ####
-census_ct = AU_Census_ct # census tract ecosocia data ####
-origin_ct = LV_open_ct #census tract with count of trip origins
-census_geoinfo = AU_Census_geoinfo                    ####
+city_name = "Minneapolis"                              ####
+proj = MNP_proj # city projection                         ####
+boundary = MNP_Census_geoinfo # service area boundary              ####
+census_ct = MNP_Census_ct # census tract ecosocia data ####
+origin_ct = MNP_open_ct #census tract with count of trip origins
+census_geoinfo = MNP_Census_geoinfo                    ####
 #*****************************************************####
+
+MNP_Census_geoinfo <- MNP_Census_geoinfo%>%
+  st_transform(MNP_proj)
+
+crs(MNP_Census_geoinfo)
+
+crs(college)
 
 ### using osm to grab data####
 college <- opq (city_name) %>%
@@ -26,16 +33,14 @@ college <- opq (city_name) %>%
 # 
 college <- st_geometry(college$osm_polygons) %>%
   st_transform(proj) %>%
-  st_sf() %>%
+  st_sf()%>%
   st_intersection(boundary) %>%
   st_centroid() %>%
   mutate(Legend = 'College',
          City = city_name) %>%
   dplyr::select(Legend, City, geometry)
 
-#Get_OSM <- function ()
-  
-  # restaurant ####
+# restaurant ####
 restaurant <- opq (city_name) %>%
   add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
   osmdata_sf(.)
@@ -105,7 +110,7 @@ cycleway %>% st_join(census_geoinfo %>% st_intersection(boundary))
 # leisure  ####
 leisure <- opq (city_name) %>%
   add_osm_feature(key = 'leisure', value = c('adult_gaming_center','amusement_arcade','common','fitness_center','hackerspace','park',
-                                              'pitch','stadium')) %>%
+                                             'pitch','stadium')) %>%
   osmdata_sf(.)
 
 leisure <- st_geometry(leisure$osm_points) %>%
@@ -130,7 +135,7 @@ tourism <- st_geometry(tourism$osm_points) %>%
   dplyr::select(Legend, City, geometry)
 
 ## code to plot and check the OSM data
-geomggplot()+
+ggplot()+
   geom_sf(data = census_ct, fill = "white")+
   #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
   geom_sf(data = college, color = "red", size = 1.5)+
@@ -205,33 +210,33 @@ nn_function <- function(measureFrom,measureTo,k) {
 }
 # knn for each spatial effects ####
 census_panel$KNN_college <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                           coordinates(college %>% st_coordinates()),
-                                           1)
+                                        coordinates(college %>% st_coordinates()),
+                                        1)
 
 census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                              coordinates(restaurant %>% st_coordinates()),
-                                              5)
+                                           coordinates(restaurant %>% st_coordinates()),
+                                           5)
 
 census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                                    coordinates(public_transport %>% st_coordinates()),
-                                                    5)
+                                                 coordinates(public_transport %>% st_coordinates()),
+                                                 5)
 
 census_panel$KNN_office <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                          coordinates(office %>% st_coordinates()),
-                                          5)
+                                       coordinates(office %>% st_coordinates()),
+                                       5)
 
 census_panel$KNN_retail <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                          coordinates(retail %>% st_coordinates()),
-                                          5)
+                                       coordinates(retail %>% st_coordinates()),
+                                       5)
 
 
 census_panel$KNN_tourism <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                           coordinates(tourism %>% st_coordinates()),
-                                           5)
+                                        coordinates(tourism %>% st_coordinates()),
+                                        5)
 
 census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
-                                           coordinates(leisure %>% st_coordinates()),
-                                           5)
+                                        coordinates(leisure %>% st_coordinates()),
+                                        5)
 
 ## count and density ####
 census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
@@ -298,6 +303,8 @@ spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dpl
 
 spatial_panel <- replace_na(spatial_panel, 0)
 spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+spatial_census <- spatial_census %>%
+  mutate(city = city_name)
 
 MNP_spatial_panel <- spatial_panel
 MNP_spatial_census <- spatial_census
@@ -305,12 +312,10 @@ MNP_spatial_census <- spatial_census
 MNP_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/MNP_spatial_panel")
  saveRDS(MNP_spatial_panel,
         file = MNP_spatial_panel_RDS)
-
 MNP_spatial_panel <- readRDS(MNP_spatial_panel_RDS)
 
 
 MNP_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/MNP_spatial_census")
  saveRDS(MNP_spatial_census,
         file = MNP_spatial_census_RDS)
-
 MNP_spatial_census <- readRDS(MNP_spatial_census_RDS)
