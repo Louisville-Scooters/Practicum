@@ -22,7 +22,8 @@ LV_spatial_census <- LV_spatial_census %>%
   dplyr::select(-dests_cnt)
 
 # Concat data from all cities together
-ML_model_panel <- rbind(LV_spatial_census%>% st_set_geometry(NULL), MNP_spatial_census%>% st_set_geometry(NULL))
+ML_model_panel <- rbind(LV_spatial_census%>% st_set_geometry(NULL), 
+                        MNP_spatial_census%>% st_set_geometry(NULL))
 
 # Try linear regression model
 

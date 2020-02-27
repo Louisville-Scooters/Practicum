@@ -1,5 +1,5 @@
 ##########################################################################
-# This script is for quering data from OpenStreetMap for CH
+# This script is for quering data from OpenStreetMap for LV
 # List of spatial features:
 # University (KNN, 1)
 # Restaurant (density)
@@ -11,12 +11,12 @@
 # Public_transport station (KNN, 5)
 
 #********************* the variables******************####
-city_name = "Chicago"                              ####
-proj = CH_proj # city projection                         ####
-boundary = CH_Census_ct # service area boundary              ####
-census_ct = CH_Census_ct # census tract ecosocia data ####
-origin_ct = CH_open_ct #census tract with count of trip origins
-census_geoinfo = CH_Census_ct                    ####
+city_name = "Washington DC"                              ####
+proj = DC_proj # city projection                         ####
+boundary = DC_Census_geoinfo # service area boundary              ####
+census_ct = DC_Census_ct # census tract ecosocia data ####
+origin_ct = DC_open_ct #census tract with count of trip origins
+census_geoinfo = DC_Census_geoinfo                    ####
 #*****************************************************####
 
 ### using osm to grab data####
@@ -26,12 +26,14 @@ college <- opq (city_name) %>%
 # 
 college <- st_geometry(college$osm_polygons) %>%
   st_transform(proj) %>%
-  st_sf()%>%
+  st_sf() %>%
   st_intersection(boundary) %>%
   st_centroid() %>%
   mutate(Legend = 'College',
          City = city_name) %>%
   dplyr::select(Legend, City, geometry)
+
+#Get_OSM <- function ()
 
 # restaurant ####
 restaurant <- opq (city_name) %>%
@@ -128,7 +130,7 @@ tourism <- st_geometry(tourism$osm_points) %>%
   dplyr::select(Legend, City, geometry)
 
 ## code to plot and check the OSM data
-ggplot()+
+geomggplot()+
   geom_sf(data = census_ct, fill = "white")+
   #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
   geom_sf(data = college, color = "red", size = 1.5)+
@@ -140,8 +142,8 @@ ggplot()+
 grid.arrange(
   ggplot()+
     geom_sf(data = census_ct, fill = "white")+
-    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
     geom_sf(data = leisure, color = "lightsalmon",alpha = 0.6)+
+    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
     geom_sf(data = boundary,fill='transparent')+
     labs(title = paste("Location of cycleway and leisure places in", city_name),
          subtitle = "Green lines as cycleway and light pink dots as leisure places") +
@@ -177,8 +179,7 @@ grid.arrange(
 ##########################################################################
 
 ## create a panal to store spatial effects ####
-census_panel <- census_geoinfo %>% dplyr::select(-tractce10)
-glimpse(census_panel)
+census_panel <- census_geoinfo %>% st_intersection(boundary %>% dplyr::select(geometry))
 
 #### KNN ####
 # nn function ####
@@ -236,82 +237,81 @@ census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[
 census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
 # retail 
 retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_retail= n())
 retail_ct$density_retail <- retail_ct$count_retail/retail_ct$area
 
 # office 
 office_ct <- st_join(census_geoinfo %>% st_intersection(boundary), office) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_office= n())
 office_ct$density_office <- office_ct$count_office/office_ct$area
 
 # restaurant 
 restaurant_ct <- st_join(census_geoinfo %>% st_intersection(boundary),restaurant) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_restaurant= n())
 restaurant_ct$density_restaurant <- restaurant_ct$count_restaurant/restaurant_ct$area
 
 # public transport
 public_transport_ct <- st_join(census_geoinfo %>% st_intersection(boundary),public_transport) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_pubtran= n())
 public_transport_ct$density_pubtran <- public_transport_ct$count_pubtran/public_transport_ct$area
 
 # cycleway
 cycleway_ct_len <- st_intersection(cycleway, boundary) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
-  group_by(geoid10) %>%
+  group_by(GEOID) %>%
   summarise(total_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
-  merge(census_geoinfo, on='geoid10', all.y=T) %>%
+  merge(census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 cycleway_ct_len$total_length <- replace_na(cycleway_ct_len$total_length,0) 
 
 # leisure
 leisure_ct <- st_join(census_geoinfo %>% st_intersection(boundary), leisure) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_leisure= n())
 leisure_ct$density_leisure <- leisure_ct$count_leisure/leisure_ct$area
 
 # tourism
 tourism_ct <- st_join(census_geoinfo %>% st_intersection(boundary), tourism) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_tourism= n())
 tourism_ct$density_tourism <- tourism_ct$count_tourism/tourism_ct$area
 
 # college
 college_ct <- st_join(census_geoinfo %>% st_intersection(boundary), college) %>%
-  group_by(geoid10,area) %>%
+  group_by(GEOID,area) %>%
   summarise(count_college= n())
 college_ct$density_college <- college_ct$count_college/college_ct$area
 
-spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(geoid10, count_retail, density_retail), by = 'geoid10') %>%
-  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_office, density_office), by = 'geoid10') %>%
-  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_leisure, density_leisure), by = 'geoid10') %>%
-  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_tourism, density_tourism), by = 'geoid10') %>%
-  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_pubtran,density_pubtran), by = 'geoid10') %>%
-  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_restaurant, density_restaurant), by = 'geoid10') %>%
-  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_college, density_college), by = 'geoid10') %>%
-  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, total_length), by = 'geoid10')
+spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
+  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
+  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
+  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_tourism, density_tourism), by = 'GEOID') %>%
+  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_pubtran,density_pubtran), by = 'GEOID') %>%
+  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_restaurant, density_restaurant), by = 'GEOID') %>%
+  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_college, density_college), by = 'GEOID') %>%
+  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, total_length), by = 'GEOID')
 
 spatial_panel <- replace_na(spatial_panel, 0)
+DC_spatial_panel <- spatial_panel
 
-##orgin_ct might change afterwards
-spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(origins_cnt, geoid10), by = 'geoid10')
-spatial_census <- spatial_census %>%
-  mutate(city = city_name)
+#might have different orgin_ct
+spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+DC_spatial_census <- spatial_census
 
-CH_spatial_panel <- spatial_panel
-CH_spatial_census <- spatial_census
+DC_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/DC_spatial_panel")
+saveRDS(DC_spatial_panel,
+        file = DC_spatial_panel_RDS)
 
-CH_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/CH_spatial_panel")
-saveRDS(CH_spatial_panel,
-        file = CH_spatial_panel_RDS)
-CH_spatial_panel <- readRDS(CH_spatial_panel_RDS)
+DC_spatial_panel <- readRDS(DC_spatial_panel_RDS)
 
+###
+DC_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/DC_spatial_census")
+saveRDS(DC_spatial_census,
+        file = DC_spatial_census_RDS)
 
-CH_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/CH_spatial_census")
-saveRDS(CH_spatial_census,
-        file = CH_spatial_census_RDS)
-CH_spatial_census <- readRDS(CH_spatial_census_RDS)
+DC_spatial_census <- readRDS(DC_spatial_census_RDS)
