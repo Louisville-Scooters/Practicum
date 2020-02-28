@@ -7,7 +7,7 @@
 ### Open Data ----
 # Count origins for each census tract
 CH_open_origins_ct <- CH_Census_ct %>% 
-  mutate(origins_cnt = lengths(st_intersects(., CH_scooter_0619)))
+  mutate(origins_cnt = (lengths(st_intersects(., CH_scooter_07to09)))/3)
 
 # Count dests for each census tract ##not working for CH yet since not all trip dest can't be joined to street (some are trails)
 #CH_open_dests_ct <- CH_Census_ct %>% 

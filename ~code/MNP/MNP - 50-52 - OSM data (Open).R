@@ -18,7 +18,6 @@ census_ct = MNP_Census_ct # census tract ecosocia data ####
 origin_ct = MNP_open_ct #census tract with count of trip origins
 census_geoinfo = MNP_Census_geoinfo                    ####
 #*****************************************************####
-
 MNP_Census_geoinfo <- MNP_Census_geoinfo%>%
   st_transform(MNP_proj)
 
@@ -184,7 +183,7 @@ grid.arrange(
 ##########################################################################
 
 ## create a panal to store spatial effects ####
-census_panel <- census_geoinfo %>% st_intersection(boundary %>% dplyr::select(geometry))
+census_panel <- census_geoinfo %>% st_set_geometry(NULL)
 
 #### KNN ####
 # nn function ####
@@ -240,6 +239,7 @@ census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[
 
 ## count and density ####
 census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
+
 # retail 
 retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
   group_by(GEOID,area) %>%
@@ -307,15 +307,17 @@ spatial_census <- spatial_census %>%
   mutate(city = city_name)
 
 MNP_spatial_panel <- spatial_panel
-MNP_spatial_census <- spatial_census
+MNP_spatial_census <- left_join(MNP_spatial_panel, MNP_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+MNP_spatial_census <- MNP_spatial_census %>%
+  mutate(city = "Minneapolis")
 
-MNP_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/MNP_spatial_panel")
+MNP_spatial_panel_RDS <- file.path(data_directory, "~RData/MNP/MNP_spatial_panel")
  saveRDS(MNP_spatial_panel,
         file = MNP_spatial_panel_RDS)
 MNP_spatial_panel <- readRDS(MNP_spatial_panel_RDS)
 
 
-MNP_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/MNP_spatial_census")
+MNP_spatial_census_RDS <- file.path(data_directory, "~RData/MNP/MNP_spatial_census")
  saveRDS(MNP_spatial_census,
         file = MNP_spatial_census_RDS)
 MNP_spatial_census <- readRDS(MNP_spatial_census_RDS)

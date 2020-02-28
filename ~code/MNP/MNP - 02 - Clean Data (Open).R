@@ -44,15 +44,18 @@ ggplot() + geom_point(data = MNP_Trail, aes(x = centroid_X, y = centroid_Y))
 MNP_street_centroid <- st_as_sf(MNP_street_unique %>% st_set_geometry(NULL), coords = c('centroid_X', 'centroid_Y'), crs = 26849)
 
 
-# Keep 2019 June data only
-MNP_scooter_0619 <- MNP_scooter_data %>%
-  filter(dataset == "/Motorized_Foot_Scooter_Trips_June_2019")
+# Keep 2019 July - September data only
+MNP_scooter_07to09 <- MNP_scooter_data %>%
+  filter(dataset == "/Motorized_Foot_Scooter_Trips_July_2019" |
+         dataset == "/Motorized_Foot_Scooter_Trips_August_2019" |
+           dataset == "/Motorized_Foot_Scooter_Trips_September_2019")
 
 # Join geographical information based on street centerline
 MNP_scooter_0619_ori <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
+MNP_scooter_07to09_ori <- merge(MNP_scooter_07to09, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
 
 MNP_scooter_0619_ori <- st_as_sf(MNP_scooter_0619_ori, sf_column_name = 'geometry', crs=MNP_proj)
-
+MNP_scooter_07to09_ori <- st_as_sf(MNP_scooter_07to09_ori, sf_column_name = 'geometry', crs=MNP_proj)
 ##############
 # MNP_scooter_0619_ori$endcenterlineid <- as.character(as.integer(MNP_scooter_0619_ori$endcenterlineid))
 # #still cannot join endcenterline id

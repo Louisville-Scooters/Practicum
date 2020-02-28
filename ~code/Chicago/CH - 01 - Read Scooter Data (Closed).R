@@ -29,7 +29,10 @@ CH_scooter_0619 <- CH_scooter_clean_ori %>%
 CH_scooter_0819 <- CH_scooter_clean_ori %>%
   filter(month(`Start Time`) == 8)
 
-unique(month(CH_scooter_clean_ori$`Start Time`))
+CH_scooter_07to09 <- CH_scooter_clean_ori %>%
+  filter(month(`Start Time`) > 6 & month(`Start Time`) < 10)
+
+unique(month(CH_scooter_07to09$`Start Time`))
 
 # Read city boundary shapefile 
 CH_ct_file <- file.path(CH_directory,

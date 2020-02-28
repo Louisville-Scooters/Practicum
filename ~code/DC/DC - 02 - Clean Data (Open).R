@@ -17,9 +17,15 @@ DC_scooter_data <- DC_scooter_data_raw %>%
     company = tolower(str_extract(dataset, "Lime|Bird|JUMP|skip|Spin|Razor|razor|Lyft")),         
     end_date = str_extract(original_end_time, "[0-9]{1,2}\\/[0-9]{1,2}\\/[0-9]{1,2}"),
     end_time = str_extract(original_end_time, "[0-9]{1,2}:[0-9]{1,2}"))
-# transform data type
-DC_scooter_ct$original_start_time <- as.POSIXct(DC_scooter_ct$original_start_time, format = '%m/%d/%y %H:%M')
-DC_scooter_ct$original_end_time <- as.POSIXct(DC_scooter_ct$original_end_time, format = '%m/%d/%y %H:%M')
+
+DC_scooter_data$original_start_time <- as_datetime(DC_scooter_data$original_start_time)
+glimpse(DC_scooter_data)
+
+DC_scooter_2019 <- DC_scooter_data %>%
+  filter(year(`original_start_time`) == 2019)
+
+DC_scooter_07to09 <- DC_scooter_2019 %>%
+  filter(month(`original_start_time`) > 6 & month(`original_start_time`) < 10)
 
 # Make sf objects ----
 make_DC_sf <- function(x, # x should be 'DC_scooter_data'
@@ -57,6 +63,8 @@ make_DC_sf <- function(x, # x should be 'DC_scooter_data'
 }
 
 # Example of make_DC_sf() function
-# DC_origins_sf <- make_DC_sf(DC_scooter_data[1:10,], 
-#                             trip_end = "origins", 
-#                             proj = DC_proj)
+DC_scooter_07to09_sf <- make_DC_sf(DC_scooter_07to09, 
+                             trip_end = "origins", 
+                             proj = DC_proj)
+
+DC_scooter_07to09_sf <- merge(DC_scooter_07to09_sf, DC_scooter_07to09, by = 'trip_id')
