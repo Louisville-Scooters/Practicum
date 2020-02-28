@@ -163,7 +163,7 @@ LV_tourism <- st_geometry(LV_tourism$osm_points) %>%
          City = 'Louisville') %>%
   dplyr::select(Legend, City, geometry)
 
-# tourism  ####
+# street  ####
 LV_street <- st_read('https://opendata.arcgis.com/datasets/f36b2c8164714b258840dce66909ba9a_1.geojson') %>%
   st_transform(LV_proj)
 
