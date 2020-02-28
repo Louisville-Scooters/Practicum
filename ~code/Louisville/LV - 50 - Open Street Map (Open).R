@@ -163,12 +163,19 @@ LV_tourism <- st_geometry(LV_tourism$osm_points) %>%
          City = 'Louisville') %>%
   dplyr::select(Legend, City, geometry)
 
+# tourism  ####
+LV_street <- st_read('https://opendata.arcgis.com/datasets/f36b2c8164714b258840dce66909ba9a_1.geojson') %>%
+  st_transform(LV_proj)
+
+LV_street <- LV_street %>% st_join(LV_Census_geoinfo %>% st_intersection(LV_SA))
+
 ## code to plot and check the OSM data
 grid.arrange(
 ggplot()+
   geom_sf(data = LV_Census_ct, fill = "white")+
   geom_sf(data = LV_cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
   geom_sf(data = LV_leisure, color = "lightsalmon",alpha = 0.6)+
+  geom_sf(data = LV_street, color = "lightblue",alpha = 0.6)+
   geom_sf(data = LV_SA,fill='transparent')+
   labs(title = "Location of cycleway and leisure places in Louisville",
        subtitle = "Green lines as cycleway and light pink dots as leisure places") +
