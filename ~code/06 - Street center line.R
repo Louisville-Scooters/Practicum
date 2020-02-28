@@ -83,14 +83,29 @@ DC_street_ct_len$total_length <- replace_na(DC_street_ct_len$total_length,0)
 KC_street <- st_read('https://opendata.arcgis.com/datasets/23246020d6894453bdfcee00956df818_41.geojson') %>%
   st_transform(KC_proj)
 
-DC_street <- DC_street %>% st_join(DC_Census_geoinfo %>% st_intersection(DC_SA))
+KC_street <- DC_street %>% st_join(KC_Census_geoinfo %>% st_intersection(KC_SA))
 
-DC_street_ct_len <- st_intersection(DC_street,DC_Census_geoinfo) %>%
+KC_street_osm <- opq ("Kansas City USA") %>%
+  add_osm_feature(key = 'highway', value = c("pedestrain", "living_road")) %>%
+  osmdata_sf(.)
+
+KC_street_osm <- st_geometry(KC_street_osm$osm_lines) %>%
+  st_transform(KC_proj) %>%
+  st_sf() %>%
+  st_intersection(KC_SA) %>%
+  mutate(Legend = 'street',
+         City = 'Kansas City') %>%
+  dplyr::select(Legend, City, geometry)
+
+ggplot()+
+  geom_sf(data = KC_street)
+
+KC_street_ct_len <- st_intersection(KC_street,KC_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
   summarise(total_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
-  merge(DC_Census_geoinfo, on='GEOID', all.y=T) %>%
+  merge(KC_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
 DC_street_ct_len$total_length <- replace_na(DC_street_ct_len$total_length,0)
