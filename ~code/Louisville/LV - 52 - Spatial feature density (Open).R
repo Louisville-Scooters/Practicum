@@ -95,6 +95,21 @@ ggplot() +
   geom_sf(data=LV_college_ct,aes(fill=density_college))+
   scale_fill_viridis()
 
+# street ####
+LV_street_ct_len <- st_intersection(LV_street,LV_Census_geoinfo) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(LV_Census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+LV_street_ct_len$total_length <- replace_na(LV_street_ct_len$total_length,0)
+
+ggplot() +
+  geom_sf(data=LV_street_ct_len %>% st_intersection(LV_SA),aes(fill=total_length))+
+  scale_fill_viridis()
+
+# create panel
 LV_spatial_panel <- left_join(LV_Census_panel, LV_retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
   left_join(LV_office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
   left_join(LV_leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
