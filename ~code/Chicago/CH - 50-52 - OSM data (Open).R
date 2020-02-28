@@ -303,15 +303,18 @@ spatial_census <- spatial_census %>%
   mutate(city = city_name)
 
 CH_spatial_panel <- spatial_panel
-CH_spatial_census <- spatial_census
 
-CH_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/CH_spatial_panel")
+CH_spatial_census <- left_join(CH_spatial_panel, CH_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(origins_cnt, geoid10), by = 'geoid10')
+CH_spatial_census <- CH_spatial_census %>%
+  mutate(city = 'Chicago')
+
+CH_spatial_panel_RDS <- file.path(data_directory, "~RData/Chicago/CH_spatial_panel")
 saveRDS(CH_spatial_panel,
         file = CH_spatial_panel_RDS)
 CH_spatial_panel <- readRDS(CH_spatial_panel_RDS)
 
 
-CH_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/CH_spatial_census")
+CH_spatial_census_RDS <- file.path(data_directory, "~RData/Chicago/CH_spatial_census")
 saveRDS(CH_spatial_census,
         file = CH_spatial_census_RDS)
 CH_spatial_census <- readRDS(CH_spatial_census_RDS)

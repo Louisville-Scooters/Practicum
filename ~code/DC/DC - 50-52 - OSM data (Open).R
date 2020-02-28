@@ -179,7 +179,7 @@ grid.arrange(
 ##########################################################################
 
 ## create a panal to store spatial effects ####
-census_panel <- census_geoinfo %>% st_intersection(boundary %>% dplyr::select(geometry))
+census_panel <- census_geoinfo %>%st_set_geometry(NULL)
 
 #### KNN ####
 # nn function ####
@@ -300,17 +300,21 @@ spatial_panel <- replace_na(spatial_panel, 0)
 DC_spatial_panel <- spatial_panel
 
 #might have different orgin_ct
-spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
-DC_spatial_census <- spatial_census
+#spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
 
-DC_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/DC_spatial_panel")
+DC_spatial_census <- left_join(DC_spatial_panel, DC_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+DC_spatial_census <- DC_spatial_census %>%
+  mutate(city = "Washington DC") %>%
+  dplyr::select(-area)
+
+DC_spatial_panel_RDS <- file.path(data_directory, "~RData/DC/DC_spatial_panel")
 saveRDS(DC_spatial_panel,
         file = DC_spatial_panel_RDS)
 
 DC_spatial_panel <- readRDS(DC_spatial_panel_RDS)
 
 ###
-DC_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/DC_spatial_census")
+DC_spatial_census_RDS <- file.path(data_directory, "~RData/DC/DC_spatial_census")
 saveRDS(DC_spatial_census,
         file = DC_spatial_census_RDS)
 

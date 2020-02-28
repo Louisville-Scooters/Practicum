@@ -7,11 +7,11 @@
 ### Open Data ----
 # Count origins for each census tract
 MNP_open_origins_ct <- MNP_Census_ct %>% 
-  mutate(origins_cnt = lengths(st_intersects(., MNP_scooter_0619_ori)))
+  mutate(origins_cnt = (lengths(st_intersects(., MNP_scooter_07to09_ori)))/3)
 
 # Count dests for each census tract ##not working for MNP yet since not all trip dest can't be joined to street (some are trails)
-MNP_open_dests_ct <- MNP_Census_ct %>% 
-  mutate(dests_cnt = lengths(st_intersects(., MNP_open_dests)))
+# MNP_open_dests_ct <- MNP_Census_ct %>% 
+#  mutate(dests_cnt = lengths(st_intersects(., MNP_open_dests)))
 
 MNP_open_ct <- MNP_open_origins_ct
 
