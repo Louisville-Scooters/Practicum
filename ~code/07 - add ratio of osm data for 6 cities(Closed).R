@@ -8,6 +8,10 @@ LV_spatial_census$ratio_college <- LV_spatial_census$count_college/length(LV_spa
 LV_spatial_census$ratio_cycleway <- LV_spatial_census$total_length/sum(LV_spatial_census$total_length)
 LV_spatial_census$ratio_street <- LV_spatial_census$street_length/sum(LV_spatial_census$street_length)
 
+LV_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_census")
+saveRDS(LV_spatial_census,
+        file = LV_spatial_census_RDS)
+LV_spatial_census <- readRDS(LV_spatial_census_RDS)
 
 AU_spatial_census$ratio_retail <- AU_spatial_census$count_retail/length(AU_spatial_census$count_retail)[1]
 AU_spatial_census$ratio_office <- AU_spatial_census$count_office/length(AU_spatial_census$count_office)[1]
@@ -19,6 +23,11 @@ AU_spatial_census$ratio_college <- AU_spatial_census$count_college/length(AU_spa
 AU_spatial_census$ratio_cycleway <- AU_spatial_census$total_length/sum(AU_spatial_census$total_length)
 AU_spatial_census$ratio_street <- AU_spatial_census$street_length/sum(AU_spatial_census$street_length)
 
+AU_spatial_census_RDS <- file.path(data_directory, "~RData/Austin/AU_spatial_census")
+saveRDS(AU_spatial_census,
+        file = AU_spatial_census_RDS)
+AU_spatial_census <- readRDS(AU_spatial_census_RDS)
+
 
 MNP_spatial_census$ratio_retail <- MNP_spatial_census$count_retail/length(MNP_spatial_census$count_retail)[1]
 MNP_spatial_census$ratio_office <- MNP_spatial_census$count_office/length(MNP_spatial_census$count_office)[1]
@@ -29,6 +38,11 @@ MNP_spatial_census$ratio_tourism <- MNP_spatial_census$count_tourism/length(MNP_
 MNP_spatial_census$ratio_college <- MNP_spatial_census$count_college/length(MNP_spatial_census$count_college)[1]
 MNP_spatial_census$ratio_cycleway <- MNP_spatial_census$total_length/sum(MNP_spatial_census$total_length)
 MNP_spatial_census$ratio_street <- MNP_spatial_census$street_length/sum(MNP_spatial_census$street_length)
+
+MNP_spatial_census_RDS <- file.path(data_directory, "~RData/MNP/MNP_spatial_census")
+saveRDS(MNP_spatial_census,
+        file = MNP_spatial_census_RDS)
+MNP_spatial_census <- readRDS(MNP_spatial_census_RDS)
 
 
 CH_spatial_census$ratio_retail <- CH_spatial_census$count_retail/length(CH_spatial_census$count_retail)[1]

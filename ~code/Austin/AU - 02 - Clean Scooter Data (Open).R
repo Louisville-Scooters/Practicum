@@ -22,8 +22,17 @@ AU_scooter <- AU_scooter_raw %>%
 AU_scooter_RDS <- file.path(data_directory, 
                             "~RData/Austin/AU_scooter")
 
-# saveRDS(AU_scooter,
-#         file = AU_scooter_RDS)
+ saveRDS(AU_scooter,
+         file = AU_scooter_RDS)
 
 # Read the saved object with the code below
 AU_scooter <- readRDS(AU_scooter_RDS)
+
+glimpse(AU_scooter)
+
+AU_scooter_07to09 <- AU_scooter%>%
+  filter(month %in% c(7, 8, 9) & year == 2019)
+
+AU_open_origins_ct <- AU_scooter_07to09 %>% 
+  group_by(census_tract_start) %>%
+  summarize(origins_ct = n()/3)
