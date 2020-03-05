@@ -60,3 +60,5 @@ AU_Census_ct <- AU_Census %>%
 
 # rejoin geometry infor from ct_LV
 AU_Census_ct <- merge(AU_Census_geoinfo, AU_Census_ct, by = 'GEOID')
+
+AU_open_ct <- merge(AU_Census_ct, AU_open_origins_ct, by.x = 'GEOID', by.y = 'census_tract_start')

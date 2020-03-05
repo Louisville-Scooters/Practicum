@@ -8,12 +8,12 @@ LV_street <- LV_street %>% st_join(LV_Census_geoinfo %>% st_intersection(LV_SA))
 LV_street_ct_len <- st_intersection(LV_street,LV_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(total_length = sum(length)) %>%
+  summarise(street_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(LV_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-LV_street_ct_len$total_length <- replace_na(LV_street_ct_len$total_length,0)
+LV_spatial_census <- left_join(LV_spatial_census, LV_street_ct_len%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, street_length), by = 'GEOID')
 
 # Austin ####
 AU_street <- st_read('https://data.austintexas.gov/api/geospatial/m5w3-uea6?method=export&format=GeoJSON') %>%
@@ -24,12 +24,14 @@ AU_street <- AU_street %>% st_join(AU_Census_geoinfo)
 AU_street_ct_len <- st_intersection(AU_street,AU_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(total_length = sum(length)) %>%
+  summarise(street_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(AU_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-AU_street_ct_len$total_length <- replace_na(AU_street_ct_len$total_length,0)
+AU_street_ct_len$street_length <- replace_na(AU_street_ct_len$street_length,0)
+
+AU_spatial_census <- left_join(AU_spatial_census, AU_street_ct_len%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, street_length), by = 'GEOID')
 
 # Chicago ####
 CH_street <- st_read('https://data.cityofchicago.org/api/geospatial/6imu-meau?method=export&format=GeoJSON') %>%
@@ -40,12 +42,12 @@ CH_street <- CH_street %>% st_join(CH_Census_geoinfo)
 CH_street_ct_len <- st_intersection(CH_street,CH_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(total_length = sum(length)) %>%
+  summarise(street_legth = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(CH_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-CH_street_ct_len$total_length <- replace_na(CH_street_ct_len$total_length,0)
+CH_street_ct_len$street_length <- replace_na(CH_street_ct_len$street_legth,0)
 
 # Minneapolis ####
 MNP_street <- st_read('https://opendata.arcgis.com/datasets/e68d01d782c04d88876bbd51e1c40702_0.geojson') %>%
@@ -56,12 +58,14 @@ MNP_street <- MNP_street %>% st_join(MNP_Census_geoinfo)
 MNP_street_ct_len <- st_intersection(MNP_street,MNP_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(total_length = sum(length)) %>%
+  summarise(street_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(MNP_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-MNP_street_ct_len$total_length <- replace_na(MNP_street_ct_len$total_length,0)
+MNP_street_ct_len$street_length <- replace_na(MNP_street_ct_len$street_length,0)
+
+MNP_spatial_census <- left_join(MNP_spatial_census, MNP_street_ct_len%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, street_length), by = 'GEOID')
 
 # DC ####
 DC_street <- st_read('https://opendata.arcgis.com/datasets/23246020d6894453bdfcee00956df818_41.geojson') %>%
@@ -72,12 +76,12 @@ DC_street <- DC_street %>% st_join(DC_Census_geoinfo)
 DC_street_ct_len <- st_intersection(DC_street,DC_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(total_length = sum(length)) %>%
+  summarise(street_legnth = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(DC_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-DC_street_ct_len$total_length <- replace_na(DC_street_ct_len$total_length,0)
+DC_street_ct_len$street_length <- replace_na(DC_street_ct_len$street_legth,0)
 
 # Kansas City ####
 KC_street <- st_read('E:/GRAD/MUSA801/KC_street/centerline_kansas_city.shp') %>%
@@ -108,9 +112,9 @@ ggplot()+
 KC_street_ct_len <- st_intersection(KC_street,KC_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(total_length = sum(length)) %>%
+  summarise(street_legth = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(KC_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-KC_street_ct_len$total_length <- replace_na(KC_street_ct_len$total_length,0)
+KC_street_ct_len$street_length <- replace_na(KC_street_ct_len$street_legth,0)
