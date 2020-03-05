@@ -51,8 +51,7 @@ library(osmdata)
 library(FNN)
 library(janitor)
 library(caret)
-library(riem)
-library(furrr)
+library(furr)
 #install.packages('osmdata')
 
 # Palettes and Themes
