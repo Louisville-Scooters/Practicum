@@ -13,33 +13,33 @@ census_key <- readRDS(census_key_RDS)
 tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
 
 # Collect census data and geometries
-KC_Census_raw1 <- get_acs(geography = "tract", 
+KC_Census_raw <- get_acs(geography = "tract", 
                          variables = census_vars, 
                          year = 2018, 
                          state = "MO", 
                          geometry = TRUE, 
-                         county=c("Jackson"),
+                         county=c("Jackson","Platte", "Clay"),
                          output = "wide") %>%
   rename_census_cols %>%
   dplyr::select(GEOID, 
                 geometry,
                 census_colNames) %>% 
   st_transform(KC_proj)
-
-KC_Census_raw2 <- get_acs(geography = "tract", 
-                         variables = census_vars, 
-                         year = 2018, 
-                         state = "MO", 
-                         geometry = TRUE, 
-                         county=c("Johnson"),
-                         output = "wide") %>%
-  rename_census_cols %>%
-  dplyr::select(GEOID, 
-                geometry,
-                census_colNames) %>% 
-  st_transform(KC_proj)
-
-KC_Census_raw <- rbind(KC_Census_raw1, KC_Census_raw2)
+# 
+# KC_Census_raw2 <- get_acs(geography = "tract", 
+#                          variables = census_vars, 
+#                          year = 2018, 
+#                          state = "KS", 
+#                          geometry = TRUE, 
+#                          county=c("Johnson"),
+#                          output = "wide") %>%
+#   rename_census_cols %>%
+#   dplyr::select(GEOID, 
+#                 geometry,
+#                 census_colNames) %>% 
+#   st_transform(KC_proj)
+# 
+# KC_Census_raw <- rbind(KC_Census_raw1, KC_Census_raw2)
 
 KC_Census_geoinfo <- KC_Census_raw %>%
   dplyr::select(GEOID, geometry)
