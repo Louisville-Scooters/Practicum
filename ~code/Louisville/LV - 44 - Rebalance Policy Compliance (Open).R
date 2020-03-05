@@ -628,7 +628,7 @@ LV_inactive_status <- c("rebalance pick up",
 
 time_intervals <- seq(from = as.POSIXct("2018-11-15 07:00:00 EDT"), 
                       to = as.POSIXct("2019-12-15 07:00:00 EDT"),
-                      by = "1 month")
+                      by = "1 week")
 
 LV_extract_latest_status2 <- function(trip_dat, datetime, buffer, 
                                       Astatus = LV_active_status){
