@@ -78,12 +78,14 @@ DC_street <- DC_street %>% st_join(DC_Census_geoinfo)
 DC_street_ct_len <- st_intersection(DC_street,DC_Census_geoinfo) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
   group_by(GEOID) %>%
-  summarise(street_legnth = sum(length)) %>%
+  summarise(street_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
   merge(DC_Census_geoinfo, on='GEOID', all.y=T) %>%
   st_as_sf()
 
-DC_street_ct_len$street_length <- replace_na(DC_street_ct_len$street_legth,0)
+DC_street_ct_len$street_length <- replace_na(DC_street_ct_len$street_length,0)
+
+DC_spatial_census <- left_join(DC_spatial_census, DC_street_ct_len%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, street_length), by = 'GEOID')
 
 # Kansas City ####
 KC_street <- st_read('E:/GRAD/MUSA801/KC_street/centerline_kansas_city.shp') %>%

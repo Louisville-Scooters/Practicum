@@ -70,6 +70,10 @@ DC_spatial_census$ratio_college <- DC_spatial_census$count_college/length(DC_spa
 DC_spatial_census$ratio_cycleway <- DC_spatial_census$total_length/sum(DC_spatial_census$total_length)
 DC_spatial_census$ratio_street <- DC_spatial_census$street_length/sum(DC_spatial_census$street_length)
 
+DC_spatial_census_RDS <- file.path(data_directory, "~RData/DC/DC_spatial_census")
+saveRDS(DC_spatial_census,
+        file = DC_spatial_census_RDS)
+DC_spatial_census <- readRDS(DC_spatial_census_RDS)
 
 KC_spatial_census$ratio_retail <- KC_spatial_census$count_retail/length(KC_spatial_census$count_retail)[1]
 KC_spatial_census$ratio_office <- KC_spatial_census$count_office/length(KC_spatial_census$count_office)[1]
