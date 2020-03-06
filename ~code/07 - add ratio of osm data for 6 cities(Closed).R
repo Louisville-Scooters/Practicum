@@ -55,6 +55,10 @@ CH_spatial_census$ratio_college <- CH_spatial_census$count_college/length(CH_spa
 CH_spatial_census$ratio_cycleway <- CH_spatial_census$total_length/sum(CH_spatial_census$total_length)
 CH_spatial_census$ratio_street <- CH_spatial_census$street_length/sum(CH_spatial_census$street_length)
 
+CH_spatial_census_RDS <- file.path(data_directory, "~RData/Chicago/CH_spatial_census")
+saveRDS(CH_spatial_census,
+        file = CH_spatial_census_RDS)
+CH_spatial_census <- readRDS(CH_spatial_census_RDS)
 
 DC_spatial_census$ratio_retail <- DC_spatial_census$count_retail/length(DC_spatial_census$count_retail)[1]
 DC_spatial_census$ratio_office <- DC_spatial_census$count_office/length(DC_spatial_census$count_office)[1]

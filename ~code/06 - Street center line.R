@@ -37,17 +37,19 @@ AU_spatial_census <- left_join(AU_spatial_census, AU_street_ct_len%>%st_set_geom
 CH_street <- st_read('https://data.cityofchicago.org/api/geospatial/6imu-meau?method=export&format=GeoJSON') %>%
   st_transform(CH_proj)
 
-CH_street <- CH_street %>% st_join(CH_Census_geoinfo)
+CH_street <- CH_street %>% st_join(CH_Census_ct)
 
-CH_street_ct_len <- st_intersection(CH_street,CH_Census_geoinfo) %>%
+CH_street_ct_len <- st_intersection(CH_street,CH_Census_ct) %>%
   mutate(length = as.numeric(st_length(.))*0.000189394) %>%
-  group_by(GEOID) %>%
-  summarise(street_legth = sum(length)) %>%
+  group_by(geoid10) %>%
+  summarise(street_length = sum(length)) %>%
   st_set_geometry(NULL) %>%
-  merge(CH_Census_geoinfo, on='GEOID', all.y=T) %>%
+  merge(CH_Census_ct, on='geoid10', all.y=T) %>%
   st_as_sf()
 
-CH_street_ct_len$street_length <- replace_na(CH_street_ct_len$street_legth,0)
+CH_street_ct_len$street_length <- replace_na(CH_street_ct_len$street_length,0)
+
+CH_spatial_census <- left_join(CH_spatial_census, CH_street_ct_len%>%st_set_geometry(NULL)%>%dplyr::select(geoid10, street_length), by = 'geoid10')
 
 # Minneapolis ####
 MNP_street <- st_read('https://opendata.arcgis.com/datasets/e68d01d782c04d88876bbd51e1c40702_0.geojson') %>%
