@@ -72,15 +72,17 @@ KC_spatial_census <- readRDS(KC_spatial_census_RDS)
 KC_LODES_RDS <- file.path(data_directory, "~RData/Kansas City/KC_LODES")
 KC_LODES <- readRDS(KC_LODES_RDS)
 KC_model <- merge(KC_spatial_census, KC_LODES, by.x = 'GEOID', by.y = 'geocode')
-
 KC_model_RDS <- file.path(data_directory, "~RData/Kansas City/KC_model")
+KC_model <- KC_model %>%
+  dplyr::select(-dests_cnt) %>%
+  st_set_geometry(NULL)
 saveRDS(KC_model,
         file = KC_model_RDS)
 KC_model <- readRDS(KC_model_RDS)
 
 ### rbind together 
 Model_panel <- rbind(LV_model, MNP_model, CH_model, DC_model)
-Model_panel <- rbind(Model_panel, AU_model)
+Model_panel <- rbind(Model_panel, KC_model)
 Model_panel_RDS <- file.path(data_directory, "~RData/Model_panel")
 saveRDS(Model_panel,
         file = Model_panel_RDS)
@@ -93,7 +95,9 @@ names(KC_model)
 
 ### Eugene rbind
 LV_model_2 <- LV_model %>% 
-  rename_all(toupper) %>% 
+  rename_all(toupper) 
+
+LV_model_2 <- LV_model_2%>% 
   dplyr::select(GEOID, names(LV_model_2), everything())
 
 MNP_model_2 <- MNP_model %>% 
@@ -102,7 +106,6 @@ MNP_model_2 <- MNP_model %>%
 
 CH_model_2 <- CH_model %>% 
   rename_all(toupper) %>% 
-  rename(GEOID = GEOID10) %>% 
   dplyr::select(names(LV_model_2))
 
 AU_model_2 <- AU_model %>% 
@@ -115,18 +118,20 @@ DC_model_2 <- DC_model %>%
   dplyr::select(GEOID, names(LV_model_2))
   
 KC_model_2 <- KC_model %>% 
-  st_drop_geometry() %>% 
   mutate(CITY = "KANSAS CITY") %>% 
   rename_all(toupper) %>% 
   dplyr::select(GEOID, names(LV_model_2))
   
-Model_panel_2 <- rbind(LV_model_2,
+Model_panel <- rbind(LV_model_2,
                        MNP_model_2,
                        CH_model_2,
                        AU_model_2,
                        DC_model_2,
                        KC_model_2)
 
-Model_panel_2_RDS <- file.path(data_directory, "~RData/Model_panel_2")
-saveRDS(Model_panel_2,
-        file = Model_panel_2_RDS)
+Model_panel_RDS <- file.path(data_directory, "~RData/Model_panel")
+saveRDS(Model_panel,
+        file = Model_panel_RDS)
+Model_panel <- readRDS(Model_panel_RDS)
+
+
