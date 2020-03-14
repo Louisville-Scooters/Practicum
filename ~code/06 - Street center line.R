@@ -14,6 +14,11 @@ LV_street_ct_len <- st_intersection(LV_street,LV_Census_geoinfo) %>%
   st_as_sf()
 
 LV_spatial_census <- left_join(LV_spatial_census, LV_street_ct_len%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, street_length), by = 'GEOID')
+LV_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_census")
+saveRDS(LV_spatial_census,
+        file = LV_spatial_census_RDS)
+LV_spatial_census <- readRDS(LV_spatial_census_RDS)
+
 
 # Austin ####
 AU_street <- st_read('https://data.austintexas.gov/api/geospatial/m5w3-uea6?method=export&format=GeoJSON') %>%
