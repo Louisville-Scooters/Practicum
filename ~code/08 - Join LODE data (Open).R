@@ -1,14 +1,14 @@
 ##########################################################################
 # This script reads in:
-# 1. LV_model
-# 2. CH_model
-# 3. MNP_model
-# 4. KS_model
-# 5. DC_model
-# 6. AU_model
+# 1. LV_spatial_census_RDS
+# 2. CH_spatial_census_RDS
+# 3. LV_spatial_census_RDS
+# 4. LV_spatial_census_RDS
+# 5. LV_spatial_census_RDS
+# 6. LV_spatial_census_RDS
 #
-# This file exports:
-# 1. Model_panel 
+# Please update this whenever you create a function that everyone will need to use
+# or load a new package
 ##########################################################################
 #Louisville
 LV_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_census")
