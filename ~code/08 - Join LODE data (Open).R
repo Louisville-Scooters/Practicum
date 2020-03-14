@@ -91,4 +91,42 @@ glimpse(Model_panel)
 glimpse(AU_model)
 names(KC_model)
 
+### Eugene rbind
+LV_model_2 <- LV_model %>% 
+  rename_all(toupper) %>% 
+  dplyr::select(GEOID, names(LV_model_2), everything())
 
+MNP_model_2 <- MNP_model %>% 
+  rename_all(toupper) %>% 
+  dplyr::select(GEOID, names(LV_model_2))
+
+CH_model_2 <- CH_model %>% 
+  rename_all(toupper) %>% 
+  rename(GEOID = GEOID10) %>% 
+  dplyr::select(names(LV_model_2))
+
+AU_model_2 <- AU_model %>% 
+  rename_all(toupper) %>% 
+  rename(ORIGINS_CNT = ORIGINS_CT) %>% 
+  dplyr::select(GEOID, names(LV_model_2))
+
+DC_model_2 <- DC_model %>% 
+  rename_all(toupper) %>% 
+  dplyr::select(GEOID, names(LV_model_2))
+  
+KC_model_2 <- KC_model %>% 
+  st_drop_geometry() %>% 
+  mutate(CITY = "KANSAS CITY") %>% 
+  rename_all(toupper) %>% 
+  dplyr::select(GEOID, names(LV_model_2))
+  
+Model_panel_2 <- rbind(LV_model_2,
+                       MNP_model_2,
+                       CH_model_2,
+                       AU_model_2,
+                       DC_model_2,
+                       KC_model_2)
+
+Model_panel_2_RDS <- file.path(data_directory, "~RData/Model_panel_2")
+saveRDS(Model_panel_2,
+        file = Model_panel_2_RDS)
