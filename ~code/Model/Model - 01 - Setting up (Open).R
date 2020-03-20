@@ -7,6 +7,15 @@
 # 1. 
 ##########################################################################
 
+library(rsample)
+library(recipes)
+library(parsnip)
+library(workflows)
+library(tune)
+library(yardstick)
+library(ranger)
+library(xgboost)
+
 # Reads in data 
 Model_panel_RDS <- file.path(data_directory, "~RData/Model_panel")
 saveRDS(Model_panel,
@@ -21,6 +30,13 @@ Model_clean_RDS <- file.path(data_directory, "~RData/Model_clean")
 saveRDS(Model_clean,
         file = Model_clean_RDS)
 Model_clean <- readRDS(Model_clean_RDS)
+
+### XINYI'S CODE ####
+# delete usused osm data KNN. COUNT, DENSITY
+# Model_clean <- Model_clean %>%
+#   dplyr::select(-starts_with('DENSITY'), -starts_with('KNN'), -starts_with('COUNT'), -ends_with('LENGTH'))
+ 
+### XINYI'S CODE ends here :] ####
 
 # Try linear regression model
 reg1 <- 
@@ -52,7 +68,7 @@ print(cv_splits_geo)
 model_rec <- recipe(ORIGINS_CNT ~ ., data = train.set) %>%
   update_role(cvID, new_role = "cvID") %>%
   step_other(cvID, threshold = 0.005) %>% #pool infrequently occurrin values into an "other" category.
-#  step_dummy(all_nominal()) %>%
+  step_dummy(all_nominal()) %>%
 #  step_log(ORIGINS_CNT) %>%  #has zero, cannot log 
   step_zv(all_predictors()) %>% #remove variables that contain only a single value.
   step_center(all_predictors(), -ORIGINS_CNT) %>% #normalize numeric data to have a mean of zero.
