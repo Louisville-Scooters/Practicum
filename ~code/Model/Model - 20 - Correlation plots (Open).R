@@ -129,4 +129,4 @@ ggplot(Model_corr_job.long, aes(Value, ORIGINS_CNT)) +
             x=-Inf, y=Inf, vjust = 1, hjust = -.1) +
   geom_smooth(method = "lm", se = FALSE, colour = "#F87895") +
   facet_wrap(~Variable, ncol = 2, scales = "free") +
-  labs(title = "Origin count as a function of job-related features")
+  labs(title = "Origin count as a function of labor-related features")
