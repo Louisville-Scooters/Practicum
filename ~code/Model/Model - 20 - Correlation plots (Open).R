@@ -109,3 +109,24 @@ ggplot(Model_corr_osm_ratio.long, aes(Value, ORIGINS_CNT)) +
   facet_wrap(~Variable, ncol = 3, scales = "free") +
   labs(title = "Origin count as a function of ratio OSM features",
        subtitle = "Ratio: number of OSM features in each tract/total number of features across the city")
+
+### correlation plots between JOB & ORIGINs_CNT ####
+Model_corr_job <- Model_clean_corr %>%
+  dplyr::select(JOBS_IN_TRACT, WORKERS_IN_TRACT, ORIGINS_CNT)
+
+# scatter plots
+Model_corr_job.long <- Model_corr_job %>%
+  gather(Variable, Value, -ORIGINS_CNT )
+
+Model_corr_job.cor <-
+  Model_corr_job.long %>%
+  group_by(Variable) %>%
+  summarize(correlation = cor(Value, ORIGINS_CNT, use = "complete.obs"))
+
+ggplot(Model_corr_job.long, aes(Value, ORIGINS_CNT)) +
+  geom_point(size = 0.1) +
+  geom_text(data = Model_corr_job.cor, aes(label = paste("r =", round(correlation, 2))),
+            x=-Inf, y=Inf, vjust = 1, hjust = -.1) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#F87895") +
+  facet_wrap(~Variable, ncol = 2, scales = "free") +
+  labs(title = "Origin count as a function of job-related features")
