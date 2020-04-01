@@ -84,3 +84,19 @@ KC_spatial_census$ratio_tourism <- KC_spatial_census$count_tourism/length(KC_spa
 KC_spatial_census$ratio_college <- KC_spatial_census$count_college/length(KC_spatial_census$count_college)[1]
 KC_spatial_census$ratio_cycleway <- KC_spatial_census$total_length/sum(KC_spatial_census$total_length)
 KC_spatial_census$ratio_street <- KC_spatial_census$street_length/sum(KC_spatial_census$street_length)
+
+
+PH_spatial_census$ratio_retail <- PH_spatial_census$count_retail/length(PH_spatial_census$count_retail)[1]
+PH_spatial_census$ratio_office <- PH_spatial_census$count_office/length(PH_spatial_census$count_office)[1]
+PH_spatial_census$ratio_restaurant <- PH_spatial_census$count_restaurant/length(PH_spatial_census$count_office)[1]
+PH_spatial_census$ratio_public_transport <- PH_spatial_census$count_pubtran/length(PH_spatial_census$count_pubtran)[1]
+PH_spatial_census$ratio_leisure <- PH_spatial_census$count_leisure/length(PH_spatial_census$count_leisure)[1]
+PH_spatial_census$ratio_tourism <- PH_spatial_census$count_tourism/length(PH_spatial_census$count_tourism)[1]
+PH_spatial_census$ratio_college <- PH_spatial_census$count_college/length(PH_spatial_census$count_college)[1]
+PH_spatial_census$ratio_cycleway <- PH_spatial_census$total_length/sum(PH_spatial_census$total_length)
+PH_spatial_census$ratio_street <- PH_spatial_census$street_length/sum(PH_spatial_census$street_length)
+
+PH_spatial_census_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_spatial_census")
+saveRDS(PH_spatial_census,
+        file = PH_spatial_census_RDS)
+PH_spatial_census <- readRDS(PH_spatial_census_RDS)

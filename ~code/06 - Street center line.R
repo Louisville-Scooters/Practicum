@@ -127,3 +127,20 @@ KC_street_ct_len <- st_intersection(KC_street,KC_Census_geoinfo) %>%
   st_as_sf()
 
 KC_street_ct_len$street_length <- replace_na(KC_street_ct_len$street_legth,0)
+
+####Philly
+PH_street <- st_read('http://data-phl.opendata.arcgis.com/datasets/c36d828494cd44b5bd8b038be696c839_0.geojson') %>%
+  st_transform(2246)
+
+PH_street <- PH_street %>% st_join(PH_Census_geoinfo)
+
+PH_street_ct_len <- st_intersection(PH_street,PH_Census_geoinfo) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(street_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(PH_Census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+
+PH_street_ct_len$street_length <- replace_na(PH_street_ct_len$street_length,0)
+
