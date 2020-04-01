@@ -46,25 +46,25 @@ for (veh in unique(LV_rebal_rebalance_only_trim1$vehicleId)) {
 } 
 
 # This should be our final dataset to use to generate trip origin-destination table
-LV_rebal_rebalance_only_trim2 <- LV_rebal_rebalance_only_trim1 %>%
-  filter(LV_rebal_rebalance_only_trim1$id %in% LV_reb_ID_list2) 
-
-LV_rebal_reb_only_combined_rowPairs <- LV_rebal_rebalance_only_trim2 %>% 
-  calc_tripDuration_and_energy()
-
-LV_rebal_reb_only_combined_rowPairs <- LV_rebal_reb_only_combined_rowPairs%>% 
-  combine_rowPairs()
-
-ggplot(LV_rebal_reb_only_combined_rowPairs, aes(duration))+
-  geom_histogram() +
-  xlim(0, 5000) +
-  ylim(0, 500)
+# LV_rebal_rebalance_only_trim2 <- LV_rebal_rebalance_only_trim1 %>%
+#   filter(LV_rebal_rebalance_only_trim1$id %in% LV_reb_ID_list2) 
+# 
+# LV_rebal_reb_only_combined_rowPairs <- LV_rebal_rebalance_only_trim2 %>% 
+#   calc_tripDuration_and_energy()
+# 
+# LV_rebal_reb_only_combined_rowPairs <- LV_rebal_reb_only_combined_rowPairs%>% 
+#   combine_rowPairs()
+# 
+# ggplot(LV_rebal_reb_only_combined_rowPairs, aes(duration))+
+#   geom_histogram() +
+#   xlim(0, 5000) +
+#   ylim(0, 500)
 
 
 # June 2019 ----
-LV_rebal_reb_only_0619_combined_rowPairs  <- LV_rebal_reb_only_combined_rowPairs %>%
-  filter(year(start_time) == 2019) %>%
-  filter(month(start_time) == 6 |month(end_time) == 6)
+# LV_rebal_reb_only_0619_combined_rowPairs  <- LV_rebal_reb_only_combined_rowPairs %>%
+#   filter(year(start_time) == 2019) %>%
+#   filter(month(start_time) == 6 |month(end_time) == 6)
 
 # Save & Load
 LV_rebal_reb_only_combined_rowPairs_RDS <- file.path(data_directory, 

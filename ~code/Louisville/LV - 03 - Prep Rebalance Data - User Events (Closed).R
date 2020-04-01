@@ -82,19 +82,19 @@ combine_rowPairs <- function(x) { # x should be the output of calc_tripDuration_
 }
 
 # June 2019 ----
-LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
-  filter(year(occurredAt) == 2019, month(occurredAt) == 6) 
-
-LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>% 
-  calc_tripDuration_and_energy()
-
-LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>% 
-  combine_rowPairs()
-
-ggplot(LV_rebal_user_only_0619_combined_rowPairs, aes(duration))+
-  geom_histogram() +
-  xlim(0, 5000) +
-  ylim(0, 250)
+# LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
+#   filter(year(occurredAt) == 2019, month(occurredAt) == 6) 
+# 
+# LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>% 
+#   calc_tripDuration_and_energy()
+# 
+# LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>% 
+#   combine_rowPairs()
+# 
+# ggplot(LV_rebal_user_only_0619_combined_rowPairs, aes(duration))+
+#   geom_histogram() +
+#   xlim(0, 5000) +
+#   ylim(0, 250)
 
 # All user data ----
 # LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>%
@@ -118,19 +118,19 @@ LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowP
 LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
 
 ##### TESTING ----
-LV_rebal_user_only_test <- LV_rebal_user_only %>% 
-  mutate(month = month(occurredAt),
-         year = year(occurredAt))
-
-LV_count_dupes <- LV_rebal_user_only_test %>% 
-  mutate(duplicate = ifelse(lag(reason, 1) == reason & lag(vehicleId, 1) == vehicleId, 
-                            TRUE, 
-                            FALSE))
-
-LV_dupe_summary <- LV_count_dupes %>% 
-  as.data.frame() %>% 
-  group_by(year, month) %>% 
-  summarize(dupe_count = sum(duplicate, na.rm = TRUE),
-            row_count = n(),
-            dupe_percentage = dupe_count / row_count)
+# LV_rebal_user_only_test <- LV_rebal_user_only %>% 
+#   mutate(month = month(occurredAt),
+#          year = year(occurredAt))
+# 
+# LV_count_dupes <- LV_rebal_user_only_test %>% 
+#   mutate(duplicate = ifelse(lag(reason, 1) == reason & lag(vehicleId, 1) == vehicleId, 
+#                             TRUE, 
+#                             FALSE))
+# 
+# LV_dupe_summary <- LV_count_dupes %>% 
+#   as.data.frame() %>% 
+#   group_by(year, month) %>% 
+#   summarize(dupe_count = sum(duplicate, na.rm = TRUE),
+#             row_count = n(),
+#             dupe_percentage = dupe_count / row_count)
 ##### END TESTING
