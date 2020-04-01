@@ -42,6 +42,15 @@ library(ggsn)
 
 # average error for each model
 ggplot(data = OOF_preds %>% 
+         dplyr::select(model, MAE) %>% 
+         distinct() , 
+       aes(x = model, y = MAE, group = 1)) +
+  geom_path(color = "red") +
+ # geom_label(aes(label = paste0(round(MAPE,1),"%"))) +
+  theme_bw()
+
+# average MAPE for each model
+ggplot(data = OOF_preds %>% 
          dplyr::select(model, MAPE) %>% 
          distinct() , 
        aes(x = model, y = MAPE, group = 1)) +
@@ -75,6 +84,15 @@ val_preds <- rbind(data.frame(lm_val_pred_geo, model = "lm"),
          MAE  = yardstick::mae_vec(ORIGINS_CNT, .pred),
          MAPE = yardstick::mape_vec(ORIGINS_CNT, .pred)) %>% 
   ungroup()
+
+# plot MAE by model type
+ggplot(data = val_preds %>% 
+         dplyr::select(model, MAE) %>% 
+         distinct() , 
+       aes(x = model, y = MAE, group = 1)) +
+  geom_path(color = "red") +
+ # geom_label(aes(label = paste0(round(MAE,1),"%"))) +
+  theme_bw()
 
 # plot MAPE by model type
 ggplot(data = val_preds %>% 

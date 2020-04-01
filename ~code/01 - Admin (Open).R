@@ -52,6 +52,7 @@ library(FNN)
 library(janitor)
 library(caret)
 library(furrr)
+library(ggplot2)
 #install.packages('osmdata')
 
 # Palettes and Themes

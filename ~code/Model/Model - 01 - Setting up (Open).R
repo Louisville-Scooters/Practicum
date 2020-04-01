@@ -33,8 +33,8 @@ Model_clean <- readRDS(Model_clean_RDS)
 
 ### XINYI'S CODE ####
 # delete usused osm data KNN. COUNT, DENSITY
-# Model_clean <- Model_clean %>%
-#   dplyr::select(-starts_with('DENSITY'), -starts_with('KNN'), -starts_with('COUNT'), -ends_with('LENGTH'))
+Model_clean <- Model_clean %>%
+   dplyr::select(-starts_with('DENSITY'), -starts_with('KNN'), -starts_with('COUNT'), -ends_with('LENGTH'))
  
 ### XINYI'S CODE ends here :] ####
 
