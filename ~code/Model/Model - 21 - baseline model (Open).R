@@ -1,11 +1,9 @@
-val_preds$AE <- abs(val_preds$ORIGINS_CNT-val_preds$.pred)
-
-val_preds %>%
-  group_by(model) %>%
-  summarise(mean_AE = mean(AE),
-            mean_RMSE = mean(RMSE),
-            mean_count = mean(ORIGINS_CNT))
-
+############################################
+# This script build the random forest model using library randomForest and 
+# do the cross validation (group by city).
+# Input data:
+# 1. Model_clean, obtained from Model - 10
+############################################
 
 # install.packages("randomForest")
 library(randomForest)
