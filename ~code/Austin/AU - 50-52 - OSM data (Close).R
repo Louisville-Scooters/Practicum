@@ -23,7 +23,7 @@ AU_Census_geoinfo <- AU_Census_geoinfo%>%
 
 crs(AU_Census_geoinfo)
 
-crs(college)
+# crs(college)
 
 ### using osm to grab data####
 college <- opq (city_name) %>%
