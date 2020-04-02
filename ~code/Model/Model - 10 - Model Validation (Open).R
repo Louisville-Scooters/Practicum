@@ -65,6 +65,8 @@ ggplot(OOF_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
   geom_smooth(method = "lm", color = "blue") +
   coord_equal() +
   facet_wrap(~model, nrow = 2) +
+  xlim(0,60000)+
+  ylim(0,60000)+
   theme_bw()
 
 
@@ -108,7 +110,9 @@ ggplot(val_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
   geom_point() +
   geom_abline(linetype = "dashed", color = "red") +
   geom_smooth(method = "lm", color = "blue") +
- # coord_equal() +
+  coord_equal() +
+  xlim(0,60000)+
+  ylim(0,60000)+
   facet_wrap(~model, nrow = 2) +
   theme_bw()
 
