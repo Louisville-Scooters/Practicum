@@ -45,7 +45,7 @@ reg1 <-
 summary(reg1)
 
 ### TidyModel from Matt's class ####
-set.seed(717)
+#set.seed(717)
 theme_set(theme_bw())
 "%!in%" <- Negate("%in%")
 
