@@ -7,73 +7,120 @@
 
 # install.packages("randomForest")
 library(randomForest)
+Model_panel_RDS <- file.path(data_directory, "~RData/Model_panel")
+#saveRDS(Model_panel,
+#        file = Model_panel_RDS)
+Model_panel <- readRDS(Model_panel_RDS)
+
 Model_clean <- na.omit(Model_panel)
 Model_clean <- Model_clean %>%
   dplyr::select(-c(MEAN_COMMUTE_TIME, CENTROID_X, CENTROID_Y),-starts_with('DENSITY'), -starts_with('KNN'), -starts_with('COUNT'), -ends_with('LENGTH'))
 
+Model_clean <- Model_clean %>% mutate(race = ifelse(PWHITE > .5, "Majority_White", "Majority_Non_White"))
 
 model1 <- randomForest(ORIGINS_CNT ~ ., data = Model_clean %>% dplyr::select(-GEOID, -CITY, -race),
                        ntree = 1000, 
                        mtry = 2, engine = 'ranger', importance = TRUE)
 
 # Predicting on train set
-Model_clean$pred_rf <- predict(model1, Model_clean, type = "class")
-Model_clean$AE_rf <- abs(Model_clean$pred_rf - Model_clean$ORIGINS_CNT)
-Model_clean$Error_rf <- Model_clean$pred_rf - Model_clean$ORIGINS_CNT
-mean(Model_clean$AE_rf)
+Model_rf <- Model_clean %>%
+  mutate(Predicted.CNT = predict(model1, Model_clean, type = "class"), 
+         AE = abs(Predicted.CNT - ORIGINS_CNT), 
+         Error = Predicted.CNT - ORIGINS_CNT)
 
-basic_model <- Model_clean %>%
-  dplyr::select(GEOID, ORIGINS_CNT, pred_rf, AE_rf, CITY, race, Error_rf)
+mean(Model_rf$AE)
+
+basic_model <- Model_rf %>%
+  dplyr::select(GEOID, ORIGINS_CNT, Predicted.CNT, AE, CITY, race, Error)
 
 model_evaluation <- basic_model %>%
   group_by(CITY) %>%
-  summarise(Mean_AE = mean(AE_rf),
+  summarise(Mean_AE = mean(AE),
             mean_CNT = mean(ORIGINS_CNT),
-            median_Error = median(AE_rf),
-            max_Error = max(AE_rf)
+            median_Error = median(AE),
+            max_Error = max(AE)
             )
 
 race_content <- basic_model %>%
   group_by(CITY,race) %>%
-  summarise(MeanError = mean(Error_rf),
+  summarise(MeanError = mean(Error),
             mean_CNT = mean(ORIGINS_CNT)
   )
+
+grid.arrange(
+model_evaluation %>%
+  ggplot(aes(CITY, Mean_AE)) + 
+  geom_bar(aes(fill = CITY), position = "dodge", stat="identity") +
+ # scale_fill_manual(values = palette5) +
+  labs(title = "Mean Absolute Errors by city") +
+  theme(axis.text.x = element_text(size=10, angle= 45))+
+  plotTheme,
+
+model_evaluation %>%
+  ggplot(aes(CITY, median_Error)) + 
+  geom_bar(aes(fill = CITY), position = "dodge", stat="identity") +
+  # scale_fill_manual(values = palette5) +
+  theme(axis.text.x = element_text(size=10, angle= 45))+
+  labs(title = "Median Errors by city") +
+  plotTheme,
+ncol = 2)
+
+race_content %>% #specify data
+  dplyr::select(-mean_CNT) %>%
+  dcast(CITY~race, Value.var = "MeanError") %>%
+  kable(caption = "Mean Error by racial context in each city") %>%
+  kable_styling("striped", full_width = F)
 
 ### glmnet ####
 library(glmnet)
 model2 <- glmnet(as.matrix(Model_clean %>% dplyr::select(-GEOID, -CITY, -race, -ORIGINS_CNT)), as.matrix(Model_clean['ORIGINS_CNT']), penalty=0,mixture=0)
-Model_clean$pred_glmnet <- predict(model2, as.matrix(Model_clean %>% dplyr::select(-GEOID, -CITY, -race, -ORIGINS_CNT)))
-Model_clean$AE_glmnet <- abs(Model_clean$pred_glmnet - Model_clean$ORIGINS_CNT)
-Model_clean$Error_glmnet <- Model_clean$pred_glmnet - Model_clean$ORIGINS_CNT
-mean(Model_clean$AE_glmnet)
 
-basic_model <- Model_clean %>%
-  dplyr::select(GEOID, ORIGINS_CNT, pred_glmnet, AE_glmnet, CITY, race, Error_glmnet)
+Model_glm <- Model_clean 
 
-model_evaluation <- basic_model %>%
+Model_glm$Predicted.CNT <- predict(model2, as.matrix(Model_clean %>% dplyr::select(-GEOID, -CITY, -race, -ORIGINS_CNT)))
+Model_glm$AE<- abs(Model_glm$Predicted.CNT - Model_glm$ORIGINS_CNT)
+Model_glm$Error <- Model_glm$Predicted.CNT - Model_glm$ORIGINS_CNT
+mean(Model_glm$AE)
+
+basic_model_glm <- Model_glm %>%
+  dplyr::select(GEOID, ORIGINS_CNT, Predicted.CNT, AE, CITY, race, Error)
+
+model_evaluation_glm <- basic_model_glm %>%
   group_by(CITY) %>%
-  summarise(Mean_AE = mean(AE_glmnet),
+  summarise(Mean_AE = mean(AE),
             mean_CNT = mean(ORIGINS_CNT),
-            median_Error = median(AE_glmnet),
-            max_Error = max(AE_glmnet)
+            median_Error = median(AE),
+            max_Error = max(AE)
   )
 
-race_content <- basic_model %>%
+race_content_glm <- basic_model_glm %>%
   group_by(CITY,race) %>%
-  summarise(MeanError = mean(Error_rf),
+  summarise(MeanError = mean(Error),
             mean_CNT = mean(ORIGINS_CNT)
   )
 
 ####### LOGO #### BY CITY ####
+library(rsample)
+library(recipes)
+library(parsnip)
+library(workflows)
+library(tune)
+library(yardstick)
 
 set.seed(717)
 theme_set(theme_bw())
 "%!in%" <- Negate("%in%")
 
 ### Initial Split for Training and Test ###
-data_split <- initial_split(Model_clean %>% dplyr::select(-GEOID), strata = "ORIGINS_CNT", prop = 0.75)
+data_split <- initial_split(Model_clean %>% 
+                              dplyr::select(-GEOID, -race,
+                                            -starts_with('DENSITY'), 
+                                            -starts_with('KNN'), -starts_with('COUNT'), 
+                                            -ends_with('LENGTH')), 
+                            strata = "ORIGINS_CNT", prop = 0.75)
 train.set <- training(data_split)
 test.set  <- testing(data_split)
+names(train.set)
 
 ### Cross Validation
 ## LOGOCV on Neighborhood with group_vfold_cv()
@@ -186,6 +233,7 @@ xgb_tuned <- xgb_wf %>%
 
 lm_tuned
 rf_tuned
+xgb_tuned
 
 ## metrics across grid
 # autoplot(xgb_tuned)
@@ -287,11 +335,13 @@ ggplot(data = OOF_preds %>%
 ggplot(OOF_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
   geom_point(alpha = 0.3) +
   geom_abline(linetype = "dashed", color = "red") +
-  geom_smooth(method = "lm", color = "blue") +
+  geom_smooth(method = "lm", color = "orange") +
   coord_equal() +
   facet_wrap(~model, nrow = 2) +
+  xlim(0,60000)+
+  ylim(0,60000)+
+  labs(title="Model Performance (OOF predictions, Cross-validation based on city)")+
   theme_bw()
-
 
 # Aggregate predictions from Validation set
 val_preds <- rbind(data.frame(lm_val_pred_geo, model = "lm"),
@@ -323,8 +373,11 @@ ggplot(data = val_preds %>%
 ggplot(val_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
   geom_point() +
   geom_abline(linetype = "dashed", color = "red") +
-  geom_smooth(method = "lm", color = "blue") +
-  # coord_equal() +
+  geom_smooth(method = "lm", color = "orange") +
+  coord_equal() +
+  xlim(0,60000)+
+  ylim(0,60000)+
+  labs(title="Model Performance (Validation predictions, Cross-validation based on city)")+
   facet_wrap(~model, nrow = 2) +
   theme_bw()
 
