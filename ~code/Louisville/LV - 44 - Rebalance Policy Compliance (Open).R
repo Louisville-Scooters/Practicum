@@ -662,28 +662,28 @@ LV_extract_latest_status2 <- function(trip_dat, datetime, buffer,
   return(output)
 }
 
-new_func <- function(...){
-  rebal_lst <- LV_rebal_sf %>% 
-    mutate(long = st_coordinates(.)[,1], 
-           lat = st_coordinates(.)[,2]) %>%
-    st_drop_geometry() %>%
-    split(.$vehicleId)
-  
-  results <- vector(mode="list", length = length(time_intervals))
-  for(i in seq_along(time_intervals)){
-    cat("Running loop for",i,"of", length(time_intervals),
-        ":",as.character(time_intervals[i]),"\n")
-    LV_rebal_sf_list_i <- map(rebal_lst, 
-                              function(y){LV_extract_latest_status2(y,
-                                                                    time_intervals[i],
-                                                                    buffer = 10)}) %>%
-      bind_rows() %>% 
-      mutate(audit_date = time_intervals[i])
-    
-    results[[i]] <- LV_rebal_sf_list_i
-  }
-  results <- bind_rows(results)
-}
+# new_func <- function(...){
+#   rebal_lst <- LV_rebal_sf %>% 
+#     mutate(long = st_coordinates(.)[,1], 
+#            lat = st_coordinates(.)[,2]) %>%
+#     st_drop_geometry() %>%
+#     split(.$vehicleId)
+#   
+#   results <- vector(mode="list", length = length(time_intervals))
+#   for(i in seq_along(time_intervals)){
+#     cat("Running loop for",i,"of", length(time_intervals),
+#         ":",as.character(time_intervals[i]),"\n")
+#     LV_rebal_sf_list_i <- map(rebal_lst, 
+#                               function(y){LV_extract_latest_status2(y,
+#                                                                     time_intervals[i],
+#                                                                     buffer = 10)}) %>%
+#       bind_rows() %>% 
+#       mutate(audit_date = time_intervals[i])
+#     
+#     results[[i]] <- LV_rebal_sf_list_i
+#   }
+#   results <- bind_rows(results)
+# }
 
 new_func_parallel <- function(...){
   rebal_lst <- LV_rebal_sf %>% 
@@ -693,13 +693,21 @@ new_func_parallel <- function(...){
     split(.$vehicleId)
   
   LV_rebal_sf_list_i <- future_map(time_intervals,
-                                   function(x) map(rebal_lst,                                   function(y){LV_extract_latest_status2(y,x,10)}) %>%
+                                   function(x) map(rebal_lst, function(y){LV_extract_latest_status2(y, x, 10)}) %>%
                                      bind_rows() %>% 
                                      mutate(audit_date = x), .progress = TRUE) %>% 
     bind_rows()
 }
 
-new_results_parallel <- new_func_parallel() # same as LV_rebal_sf_list
+# new_results_parallel <- new_func_parallel() # same as LV_rebal_sf_list
+
+LV_new_results_parallel_RDS <- file.path(data_directory, 
+                                         "~RData/Louisville/LV_new_results_parallel")
+
+# saveRDS(new_results_parallel,
+#         file = LV_new_results_parallel_RDS)
+
+new_results_parallel <- readRDS(LV_new_results_parallel_RDS)
 
 LV_rebal_sf_list_2 <- new_results_parallel %>% 
   filter(!is.na(long),
@@ -745,9 +753,10 @@ LV_distro_areas_map <- LV_distro_areas %>%
 
 ggplot() +
   geom_sf(data = LV_distro_areas_map, aes(fill = Dist_Zone2)) +
-  scale_fill_viridis_d(limits = c("Zones 1 and 9 (20%)", "Zone 8 (10%)"),
+  scale_fill_viridis_d(name = "Distribution Zones",
+                       limits = c("Zones 1 and 9 (20%)", "Zone 8 (10%)"),
                        direction = -1, 
-                       na.translate = FALSE) +
+                       na.value = "lightgray") +
   mapTheme() +
   labs(title = "Scooter Rebalancing Requirements in Louisville")
 
@@ -760,7 +769,7 @@ LV_rebal_sf_list_summary_2_map <- LV_rebal_sf_list_summary_2 %>%
                                       dist_zone == "Dist_1_9_pct" ~ "Dist_1_9_pct",
                                       TRUE ~ NA_character_),
                             levels = c("Dist_8_pct", "Dist_1_9_pct"),
-                            labels = c("Zone 8", "Zone 9")))
+                            labels = c("Zone 8", "Zone 1 & 9")))
 
 ggplot(LV_rebal_sf_list_summary_2_map,
        aes(x = audit_date,
