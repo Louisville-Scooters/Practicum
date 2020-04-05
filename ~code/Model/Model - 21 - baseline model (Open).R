@@ -343,6 +343,20 @@ ggplot(OOF_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
   labs(title="Model Performance (OOF predictions, Cross-validation based on city)")+
   theme_bw()
 
+# distribution of observation VS pred
+as.data.frame(OOF_preds) %>%
+  dplyr::select(.pred,ORIGINS_CNT) %>%
+  gather(Variable, Value) %>%
+  ggplot(aes(Value, fill = Variable)) + 
+  geom_density(alpha = 0.5) + 
+  scale_fill_manual(values = c("#FFD364", "#D16BA5")) +
+  labs(title="Distribution of trip counts and predicted trip counts", 
+       x = "Trip counts/Prediction", y = "Density of observations") +
+  xlim(0, 10000)+
+  plotTheme
+
+median(OOF_preds$ORIGINS_CNT)
+
 # Aggregate predictions from Validation set
 val_preds <- rbind(data.frame(lm_val_pred_geo, model = "lm"),
                    data.frame(glmnet_val_pred_geo, model = "glmnet"),
