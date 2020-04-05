@@ -61,8 +61,46 @@ AU_model_centorid <- AU_model_2 %>%
          crs = AU_proj) %>% 
   st_transform(4326)
 
-geojsonio::geojson_write(dat, file = "dat.GeoJSON")
+AU_model_centorid_RDS <- file.path(data_directory, "~RData/Austin/AU_model_centorid.GeoJSON")
+geojsonio::geojson_write(AU_model_centorid, file = AU_model_centorid_RDS)
 
-st_as_sf(coords = c("EndLongitude", "EndLatitude"), 
-         crs = 4326) %>% 
-  st_transform(proj)
+CH_model_centorid <- CH_model_2 %>%
+  st_as_sf(coords = c("CENTROID_X", "CENTROID_Y"), 
+           crs = CH_proj) %>% 
+  st_transform(4326)
+
+CH_model_centorid_RDS <- file.path(data_directory, "~RData/Chicago/CH_model_centorid.GeoJSON")
+geojsonio::geojson_write(CH_model_centorid, file = CH_model_centorid_RDS)
+
+DC_model_centorid <- DC_model_2 %>%
+  st_as_sf(coords = c("CENTROID_X", "CENTROID_Y"), 
+           crs = DC_proj) %>% 
+  st_transform(4326)
+
+DC_model_centorid_RDS <- file.path(data_directory, "~RData/DC/DC_model_centorid.GeoJSON")
+geojsonio::geojson_write(DC_model_centorid, file = DC_model_centorid_RDS)
+
+MNP_model_centorid <- MNP_model_2 %>%
+  st_as_sf(coords = c("CENTROID_X", "CENTROID_Y"), 
+           crs = MNP_proj) %>% 
+  st_transform(4326)
+
+MNP_model_centorid_RDS <- file.path(data_directory, "~RData/Minneapolis/MNP_model_centorid.GeoJSON")
+geojsonio::geojson_write(MNP_model_centorid, file = MNP_model_centorid_RDS)
+
+KC_model_centorid <- KC_model_2 %>%
+  st_as_sf(coords = c("CENTROID_X", "CENTROID_Y"), 
+           crs = KC_proj) %>% 
+  st_transform(4326)
+
+KC_model_centorid_RDS <- file.path(data_directory, "~RData/Kansas City/KC_model_centorid.GeoJSON")
+geojsonio::geojson_write(KC_model_centorid, file = KC_model_centorid_RDS)
+
+LV_model_centorid <- LV_model_2 %>%
+  st_as_sf(coords = c("CENTROID_X", "CENTROID_Y"), 
+           crs = LV_proj) %>% 
+  st_transform(4326)
+
+LV_model_centorid_RDS <- file.path(data_directory, "~RData/Louisville/LV_model_centorid.GeoJSON")
+geojsonio::geojson_write(LV_model_centorid, file = LV_model_centorid_RDS)
+
