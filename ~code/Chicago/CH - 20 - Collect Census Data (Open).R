@@ -27,6 +27,9 @@ CH_Census_raw <- get_acs(geography = "tract",
 
 CH_tract_list <- CH_ct$geoid10
 
+CH_Census_geoinfo <- CH_Census_raw %>%
+  dplyr::select(GEOID, geometry)
+
 # extract centroid of each census tract
 CH_ct <- CH_ct %>% 
   mutate(centroid_X = st_coordinates(st_centroid(CH_ct))[, 1],

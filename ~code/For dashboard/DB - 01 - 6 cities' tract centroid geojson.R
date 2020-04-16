@@ -1,5 +1,5 @@
 ##########################################################################
-# This script is for exporting geojsons for 6 cities' census tract with census var info. 
+# This script is for exporting geojsons for 6 cities' census tract centorid geojson with census var info. 
 # It reads in:
 # 1. City_model (x6)
 
