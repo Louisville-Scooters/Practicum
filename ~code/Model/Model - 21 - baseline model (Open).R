@@ -247,7 +247,7 @@ show_best(rf_tuned, metric = "rmse", n = 15, maximize = FALSE)
 show_best(xgb_tuned, metric = "rmse", n = 15, maximize = FALSE)
 
 lm_best_params     <- select_best(lm_tuned, metric = "rmse", maximize = FALSE)
-glmnet_best_params <- select_best(glmnet_tuned, metritrc = "rmse", maximize = FALSE)
+glmnet_best_params <- select_best(glmnet_tuned, metric = "rmse", maximize = FALSE)
 rf_best_params     <- select_best(rf_tuned, metric = "rmse", maximize = FALSE)
 xgb_best_params    <- select_best(xgb_tuned, metric = "rmse", maximize = FALSE)
 
