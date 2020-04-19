@@ -263,6 +263,9 @@ PH_spatial_census$ratio_college <- PH_spatial_census$count_college/length(PH_spa
 PH_spatial_census$ratio_cycleway <- PH_spatial_census$total_length/sum(PH_spatial_census$total_length)
 PH_spatial_census$ratio_street <- PH_spatial_census$street_length/sum(PH_spatial_census$street_length)
 
+
+PH_spatial_census <- merge(PH_spatial_census, as.data.frame(PH_Census) %>% dplyr::select(-geometry), by='GEOID')
+
 # PH_spatial_census_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_spatial_census")
 # saveRDS(PH_spatial_census,
 #         file = PH_spatial_census_RDS)
