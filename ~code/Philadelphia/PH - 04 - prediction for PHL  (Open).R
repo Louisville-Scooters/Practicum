@@ -64,4 +64,6 @@ ggplot() +
   geom_sf(data = PH_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
   scale_fill_manual(values = palette5,
                     labels = qBr(PH_result, "Predicted.CNT"),
-                    name="Quintile\nBreaks")
+                    name="Quintile\nBreaks") +
+  labs(title = 'Prediced Trip Count in Philadelphia, PA', size=18) +
+  mapTheme()
