@@ -170,5 +170,57 @@ MNP_model_tract <- MNP_model_tract %>%
 MNP_model_tract_RDS <- file.path(data_directory, "~RData/Minneapolis/MNP_model_tract.GeoJSON")
 geojsonio::geojson_write(MNP_model_tract, file = MNP_model_tract_RDS)
 
+## Philadelphia 
+PH_result_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_result")
+PH_result <- readRDS(PH_result_RDS)
 
+PH_model_tract <- merge(PH_result %>%dplyr::select(-centroid_X, -centroid_Y, -pWhite), PH_model, by = "GEOID")
+
+PH_model_tract <- PH_model_tract %>% 
+  rename_all(toupper) 
+
+PH_model_tract <- PH_model_tract %>% st_transform(4326)
+
+PH_model_tract$PREDICTED.CNT[is.na(PH_model_tract$PREDICTED.CNT)] <- 0
+PH_model_tract$PREDICTED.CNT <- as.numeric(PH_model_tract$PREDICTED.CNT)
+
+PH_model_tract[is.na(PH_model_tract)] <- 0
+PH_model_tract <- PH_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+PH_model_tract_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_model_tract.GeoJSON")
+geojsonio::geojson_write(PH_model_tract, file = PH_model_tract_RDS)
+
+## Madison 
+MD_result_RDS <- file.path(data_directory, "~RData/Madison/MD_result")
+MD_result <- readRDS(MD_result_RDS)
+
+MD_model_tract <- merge(MD_result %>%dplyr::select(-centroid_X, -centroid_Y, -pWhite), MD_model, by = "GEOID")
+
+MD_model_tract <- MD_model_tract %>% 
+  rename_all(toupper) 
+
+MD_model_tract <- MD_model_tract %>% st_transform(4326)
+
+MD_model_tract$PREDICTED.CNT[is.na(MD_model_tract$PREDICTED.CNT)] <- 0
+MD_model_tract$PREDICTED.CNT <- as.numeric(MD_model_tract$PREDICTED.CNT)
+
+MD_model_tract[is.na(MD_model_tract)] <- 0
+MD_model_tract <- MD_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+MD_model_tract_RDS <- file.path(data_directory, "~RData/Madison/MD_model_tract.GeoJSON")
+geojsonio::geojson_write(MD_model_tract, file = MD_model_tract_RDS)
 
