@@ -1,6 +1,6 @@
 PH_spatial_census_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_spatial_census")
 PH_spatial_census <- readRDS(PH_spatial_census_RDS)
-PH_LODES_RDS <- file.path(data_directory, "~RData/Kansas City/PH_LODES")
+PH_LODES_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_LODES")
 PH_LODES <- readRDS(PH_LODES_RDS)
 PH_model <- merge(PH_spatial_census, PH_LODES, by.x = 'GEOID', by.y = 'geocode')
 PH_model <- PH_model %>%

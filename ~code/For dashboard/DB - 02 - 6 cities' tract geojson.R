@@ -58,15 +58,106 @@ KC_model_2 <- KC_model %>%
 
 ## join back census tract geometry ####
 
-## run MNP - 21 till line 31 to get MNP_Census_geoinfo
+## run AU - 21 till line 31 to get AU_Census_geoinfo
+AU_model_tract <- merge(AU_Census_geoinfo, AU_model_2, by = "GEOID") %>% st_transform(4326)
+AU_model_tract$ORIGINS_CNT[is.na(AU_model_tract$ORIGINS_CNT)] <- 0
+AU_model_tract$ORIGINS_CNT <- as.numeric(AU_model_tract$ORIGINS_CNT)
+
+AU_model_tract[is.na(AU_model_tract)] <- 0
+AU_model_tract <- AU_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+AU_model_tract_RDS <- file.path(data_directory, "~RData/Austin/AU_model_tract.GeoJSON")
+geojsonio::geojson_write(AU_model_tract, file = AU_model_tract_RDS)
+
+## run CH - 20 till line 31 to get CH_Census_geoinfo
+CH_model_tract <- merge(CH_Census_geoinfo, CH_model_2, by = "GEOID") %>% st_transform(4326)
+CH_model_tract$ORIGINS_CNT[is.na(CH_model_tract$ORIGINS_CNT)] <- 0
+CH_model_tract$ORIGINS_CNT <- as.numeric(CH_model_tract$ORIGINS_CNT)
+
+CH_model_tract[is.na(CH_model_tract)] <- 0
+CH_model_tract <- CH_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+CH_model_tract_RDS <- file.path(data_directory, "~RData/Chicago/CH_model_tract.GeoJSON")
+geojsonio::geojson_write(CH_model_tract, file = CH_model_tract_RDS)
+
+## run DC - 20 till line 24 to get DC_Census_geoinfo
+DC_model_tract <- merge(DC_Census_geoinfo, DC_model_2, by = "GEOID") %>% st_transform(4326)
+DC_model_tract$ORIGINS_CNT[is.na(DC_model_tract$ORIGINS_CNT)] <- 0
+DC_model_tract$ORIGINS_CNT <- as.numeric(DC_model_tract$ORIGINS_CNT)
+
+DC_model_tract[is.na(DC_model_tract)] <- 0
+DC_model_tract <- DC_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+DC_model_tract_RDS <- file.path(data_directory, "~RData/DC/DC_model_tract.GeoJSON")
+geojsonio::geojson_write(DC_model_tract, file = DC_model_tract_RDS)
+
+## run KC - 21 till line 45 to get KC_Census_geoinfo
+KC_model_tract <- merge(KC_Census_geoinfo, KC_model_2, by = "GEOID") %>% st_transform(4326)
+KC_model_tract$ORIGINS_CNT[is.na(KC_model_tract$ORIGINS_CNT)] <- 0
+KC_model_tract$ORIGINS_CNT <- as.numeric(KC_model_tract$ORIGINS_CNT)
+
+KC_model_tract[is.na(KC_model_tract)] <- 0
+KC_model_tract <- KC_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+KC_model_tract_RDS <- file.path(data_directory, "~RData/Kansas City/KC_model_tract.GeoJSON")
+geojsonio::geojson_write(KC_model_tract, file = KC_model_tract_RDS)
+
+## run LV - 20 till line 30 to get LV_Census_geoinfo
+LV_model_tract <- merge(LV_Census_geoinfo, LV_model_2, by = "GEOID") %>% st_transform(4326)
+names(LV_model_tract)
+
+LV_model_tract <- LV_model_tract %>%
+  dplyr::select(-centroid_X, -centroid_Y)
+
+LV_model_tract$ORIGINS_CNT[is.na(LV_model_tract$ORIGINS_CNT)] <- 0
+LV_model_tract$ORIGINS_CNT <- as.numeric(LV_model_tract$ORIGINS_CNT)
+
+LV_model_tract[is.na(LV_model_tract)] <- 0
+LV_model_tract <- LV_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+LV_model_tract_RDS <- file.path(data_directory, "~RData/Louisville/LV_model_tract.GeoJSON")
+geojsonio::geojson_write(LV_model_tract, file = LV_model_tract_RDS)
+
+## run MNP - 20 till line 30 to get MNP_Census_geoinfo
 MNP_model_tract <- merge(MNP_Census_geoinfo, MNP_model_2, by = "GEOID") %>% st_transform(4326)
 MNP_model_tract$ORIGINS_CNT[is.na(MNP_model_tract$ORIGINS_CNT)] <- 0
 MNP_model_tract$ORIGINS_CNT <- as.numeric(MNP_model_tract$ORIGINS_CNT)
 
-names(MNP_model_tract)
 MNP_model_tract[is.na(MNP_model_tract)] <- 0
-MNP_model_tract[, 2:40] <- as.numeric(unlist(MNP_model_tract[,2:40]))
-MNP_model_tract[, 42:53] <- as.numeric(unlist(MNP_model_tract[,42:53]))
 MNP_model_tract <- MNP_model_tract %>%
   mutate(PWHITE = PWHITE*100,
          PTRANS = PTRANS*100,
@@ -76,44 +167,8 @@ MNP_model_tract <- MNP_model_tract %>%
          POCCUPIED = POCCUPIED*100,
          PVEHAVAI = PVEHAVAI*100)
 
-glimpse(MNP_model_tract)
-
 MNP_model_tract_RDS <- file.path(data_directory, "~RData/Minneapolis/MNP_model_tract.GeoJSON")
 geojsonio::geojson_write(MNP_model_tract, file = MNP_model_tract_RDS)
 
-## run CH - 20 till line 31 to get CH_Census_geoinfo
-CH_model_tract <- merge(CH_Census_geoinfo, CH_model_2, by = "GEOID") %>% st_transform(4326)
-CH_model_tract$ORIGINS_CNT[is.na(CH_model_tract$ORIGINS_CNT)] <- 0
-CH_model_tract$ORIGINS_CNT <- as.numeric(CH_model_tract$ORIGINS_CNT)
-CH_model_tract_RDS <- file.path(data_directory, "~RData/Chicago/CH_model_tract.GeoJSON")
-geojsonio::geojson_write(CH_model_tract, file = CH_model_tract_RDS)
-
-## run DC - 20 till line 24 to get DC_Census_geoinfo
-DC_model_tract <- merge(DC_Census_geoinfo, DC_model_2, by = "GEOID") %>% st_transform(4326)
-DC_model_tract$ORIGINS_CNT[is.na(DC_model_tract$ORIGINS_CNT)] <- 0
-DC_model_tract$ORIGINS_CNT <- as.numeric(DC_model_tract$ORIGINS_CNT)
-DC_model_tract_RDS <- file.path(data_directory, "~RData/DC/DC_model_tract.GeoJSON")
-geojsonio::geojson_write(DC_model_tract, file = DC_model_tract_RDS)
-
-## run KC - 21 till line 45 to get KC_Census_geoinfo
-KC_model_tract <- merge(KC_Census_geoinfo, KC_model_2, by = "GEOID") %>% st_transform(4326)
-KC_model_tract$ORIGINS_CNT[is.na(KC_model_tract$ORIGINS_CNT)] <- 0
-KC_model_tract$ORIGINS_CNT <- as.numeric(KC_model_tract$ORIGINS_CNT)
-KC_model_tract_RDS <- file.path(data_directory, "~RData/Kansas City/KC_model_tract.GeoJSON")
-geojsonio::geojson_write(KC_model_tract, file = KC_model_tract_RDS)
-
-## run LV - 21 till line 30 to get LV_Census_geoinfo
-LV_model_tract <- merge(LV_Census_geoinfo, LV_model_2, by = "GEOID") %>% st_transform(4326)
-LV_model_tract$ORIGINS_CNT[is.na(LV_model_tract$ORIGINS_CNT)] <- 0
-LV_model_tract$ORIGINS_CNT <- as.numeric(LV_model_tract$ORIGINS_CNT)
-LV_model_tract_RDS <- file.path(data_directory, "~RData/Louisville/LV_model_tract.GeoJSON")
-geojsonio::geojson_write(LV_model_tract, file = LV_model_tract_RDS)
-
-## run MNP - 20 till line 30 to get MNP_Census_geoinfo
-MNP_model_tract <- merge(MNP_Census_geoinfo, MNP_model_2, by = "GEOID") %>% st_transform(4326)
-MNP_model_tract$ORIGINS_CNT[is.na(MNP_model_tract$ORIGINS_CNT)] <- 0
-MNP_model_tract$ORIGINS_CNT <- as.numeric(MNP_model_tract$ORIGINS_CNT)
-MNP_model_tract_RDS <- file.path(data_directory, "~RData/Minneapolis/MNP_model_tract.GeoJSON")
-geojsonio::geojson_write(MNP_model_tract, file = MNP_model_tract_RDS)
 
 
