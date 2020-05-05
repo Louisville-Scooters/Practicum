@@ -224,3 +224,20 @@ MD_model_tract <- MD_model_tract %>%
 MD_model_tract_RDS <- file.path(data_directory, "~RData/Madison/MD_model_tract.GeoJSON")
 geojsonio::geojson_write(MD_model_tract, file = MD_model_tract_RDS)
 
+
+AU_model_tract <- st_read(AU_model_tract_RDS)
+CH_model_tract <- st_read(CH_model_tract_RDS)
+DC_model_tract <- st_read(DC_model_tract_RDS)
+KC_model_tract <- st_read(KC_model_tract_RDS)
+LV_model_tract <- st_read(LV_model_tract_RDS)
+PH_model_tract <- st_read(PH_model_tract_RDS)
+MD_model_tract <- st_read(MD_model_tract_RDS)
+
+sum(MD_model_tract$JOBS_IN_TRACT)
+sum(MD_model_tract$PREDICTED.CNT)
+
+sum(PH_model_tract$JOBS_IN_TRACT)
+sum(PH_model_tract$PREDICTED.CNT)
+
+PH_model_tract <- st_read(PH_model_tract_RDS)
+names(PH_model_tract)
