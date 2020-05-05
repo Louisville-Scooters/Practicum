@@ -11,7 +11,7 @@ JV_model <- JV_model %>%
 JV_model <- JV_model %>% dplyr::select(-c(MEAN_COMMUTE_TIME, CENTROID_X, CENTROID_Y),-starts_with('DENSITY'), -starts_with('COUNT'), -ends_with('LENGTH'))
 
 
-# JV_model_RDS <- file.path(data_directory, "~RData/Kansas City/JV_model")
+# JV_model_RDS <- file.path(data_directory, "~RData/Jacksonville/JV_model")
 # saveRDS(JV_model,
 #        file = JV_model_RDS)
 # JV_model <- readRDS(JV_model_RDS)

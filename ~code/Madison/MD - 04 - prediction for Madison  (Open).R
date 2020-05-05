@@ -42,21 +42,27 @@ MD_model <- MD_model %>% dplyr::select(-c(MEAN_COMMUTE_TIME, CENTROID_X, CENTROI
 # mean(Model_rf$ORIGINS_CNT)
 
 # predict on MD data
-census_var <- colnames(MD_model)[c(1,11:23)]
-osm_var <- colnames(MD_model)[c(1:10, 24:25)]
+model1 <- randomForest(ORIGINS_CNT ~ ., data = Model_clean %>% dplyr::select(-CITY, -race),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
 
-MD_model_census <- MD_model %>% dplyr::select(census_var)
-MD_model_osm <- MD_model %>% dplyr::select(osm_var)
-Model_MD_rf <- MD_model_census %>%
-  mutate(Predicted.CNT.CENSUS = round(predict(model1, MD_model_census, type = "class"),0))
 
-Model_MD_rf <- Model_MD_rf %>%
-  mutate(Predicted.CNT.OSM = round(predict(model2, MD_model_osm, type = "class"),0))
+MD_model <- MD_model %>%
+  mutate(Predicted.CNT = round(predict(model1, MD_model, type = "class"),0))
 
-Model_MD_rf <- Model_MD_rf %>%
-  mutate(Predicted.CNT = round(predict(model3, Model_MD_rf, type = "class"),0))
+MD_result <- merge(MD_Census_geoinfo, MD_model %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
 
-MD_result <- merge(MD_Census_geoinfo, Model_MD_rf %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
+###### race content ##########
+MD_result <- merge(MD_result, as.data.frame(MD_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
+MD_result <- mutate(MD_result, race = ifelse(pWhite > .5, "Majority_White", "Majority_Non_White"))
+
+MD_result %>%
+  na.omit() %>%
+  group_by(race) %>%
+  summarise(mean_trip_count=mean(Predicted.CNT))
+
+MD_result <- MD_result %>% na.omit()
+mean(MD_result$Predicted.CNT)
 
 library(viridis)
 palette5 <- c('#f0f9e8','#bae4bc','#7bccc4','#43a2ca','#0868ac')
@@ -67,3 +73,9 @@ ggplot() +
                     name="Quintile\nBreaks") +
   labs(title = 'Prediced Trip Count in Madison, WI', size=18) +
   mapTheme()
+
+
+# MD_result_RDS <- file.path(data_directory, "~RData/Madison/MD_result")
+# saveRDS(MD_result,
+#         file = MD_result_RDS)
+# MD_result <- readRDS(MD_result_RDS)
