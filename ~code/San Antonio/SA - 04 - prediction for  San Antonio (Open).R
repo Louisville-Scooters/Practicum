@@ -1,6 +1,6 @@
-SA_spatial_census_RDS <- file.path(data_directory, "~RData/Raleigh/SA_spatial_census")
+SA_spatial_census_RDS <- file.path(data_directory, "~RData/San Antonio/SA_spatial_census")
 SA_spatial_census <- readRDS(SA_spatial_census_RDS)
-SA_LODES_RDS <- file.path(data_directory, "~RData/Raleigh/SA_LODES")
+SA_LODES_RDS <- file.path(data_directory, "~RData/San Antonio/SA_LODES")
 SA_LODES <- readRDS(SA_LODES_RDS)
 
 SA_model <- merge(SA_spatial_census, SA_LODES, by.x = 'GEOID', by.y = 'geocode')
@@ -49,7 +49,7 @@ ggplot() +
   mapTheme()
 
 
-SA_result_RDS <- file.path(data_directory, "~RData/Houston/SA_result")
+SA_result_RDS <- file.path(data_directory, "~RData/San Antonuo/SA_result")
 saveRDS(SA_result,
         file = SA_result_RDS)
 SA_result <- readRDS(SA_result_RDS)

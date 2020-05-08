@@ -11,10 +11,10 @@ AV_model <- AV_model %>%
 AV_model <- AV_model %>% dplyr::select(-c(MEAN_COMMUTE_TIME, CENTROID_X, CENTROID_Y),-starts_with('DENSITY'), -starts_with('COUNT'), -ends_with('LENGTH'))
 
 
-# AV_model_RDS <- file.path(data_directory, "~RData/Asheville/AV_model")
+ AV_model_RDS <- file.path(data_directory, "~RData/Asheville/AV_model")
 # saveRDS(AV_model,
 #        file = AV_model_RDS)
-# AV_model <- readRDS(AV_model_RDS)
+ AV_model <- readRDS(AV_model_RDS)
 
 model1 <- randomForest(ORIGINS_CNT ~ ., data = Model_clean %>% dplyr::select(-CITY, -race),
                        ntree = 1000, 
@@ -49,7 +49,7 @@ ggplot() +
   mapTheme()
 
 
-# AV_result_RDS <- file.path(data_directory, "~RData/Asheville/AV_result")
+AV_result_RDS <- file.path(data_directory, "~RData/Asheville/AV_result")
 # saveRDS(AV_result,
 #         file = AV_result_RDS)
 AV_result <- readRDS(AV_result_RDS)

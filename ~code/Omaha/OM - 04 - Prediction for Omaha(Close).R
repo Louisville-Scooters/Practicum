@@ -49,7 +49,7 @@ ggplot() +
   mapTheme()
 
 
-# OM_result_RDS <- file.path(data_directory, "~RData/Omaha/OM_result")
+OM_result_RDS <- file.path(data_directory, "~RData/Omaha/OM_result")
 # saveRDS(OM_result,
 #         file = OM_result_RDS)
 OM_result <- readRDS(OM_result_RDS)

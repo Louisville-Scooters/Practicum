@@ -49,7 +49,7 @@ ggplot() +
   mapTheme()
 
 
-# HF_result_RDS <- file.path(data_directory, "~RData/Hartford/HF_result")
+HF_result_RDS <- file.path(data_directory, "~RData/Hartford/HF_result")
 # saveRDS(HF_result,
 #         file = HF_result_RDS)
 HF_result <- readRDS(HF_result_RDS)

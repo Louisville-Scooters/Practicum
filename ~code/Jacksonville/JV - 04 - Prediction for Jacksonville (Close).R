@@ -49,7 +49,7 @@ ggplot() +
   mapTheme()
 
 
-# JV_result_RDS <- file.path(data_directory, "~RData/Jacksonville/JV_result")
+JV_result_RDS <- file.path(data_directory, "~RData/Jacksonville/JV_result")
 # saveRDS(JV_result,
 #         file = JV_result_RDS)
 JV_result <- readRDS(JV_result_RDS)
