@@ -22,3 +22,7 @@ DC_open_ct <- DC_open_origins_ct
 #               dplyr::select(GEOID, dests_cnt),
 #             by = "GEOID")
 
+DC_scooter_RDS <- file.path(data_directory, 
+                            "~RData/DC/DC_model")
+DC_scooter <- readRDS(DC_scooter_RDS)
+

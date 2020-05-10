@@ -22,3 +22,67 @@ CH_open_ct <- CH_open_origins_ct
 #               dplyr::select(GEOID, dests_cnt),
 #             by = "GEOID")
 
+# plot net inflow/outflow
+CH_scooter_ct <- CH_scooter_07to09 %>% na.omit()
+CH_ORIGINS <- CH_scooter_ct %>%
+  group_by(`Start Census Tract`) %>% 
+  summarise(Outflow = n()) %>%
+  na.omit()
+
+CH_DESTS <- CH_scooter_ct %>%
+  group_by(`End Census Tract`) %>% 
+  summarise(Inflow = n()) %>%
+  na.omit()
+
+CH_net_inoutflow <- merge(CH_ORIGINS %>% st_set_geometry(NULL), CH_DESTS %>% st_set_geometry(NULL), all = T, by.x='Start Census Tract', by.y='End Census Tract')
+CH_net_inoutflow[is.na(CH_net_inoutflow)] <- 0
+CH_net_inoutflow <- CH_net_inoutflow %>%
+  mutate(NetInflow = Inflow - Outflow) %>%
+  merge(CH_Census_geoinfo %>% dplyr::select(GEOID, geometry), by.x='Start Census Tract', by.y='GEOID')
+most_pickups <- CH_net_inoutflow$`Start Census Tract`[CH_net_inoutflow$Outflow==max(CH_net_inoutflow$Outflow)]
+most_dropoffs <- CH_net_inoutflow$`Start Census Tract`[CH_net_inoutflow$Inflow==max(CH_net_inoutflow$Inflow)]
+
+CH_net_inoutflow <- CH_net_inoutflow %>%
+  mutate(NetInflowRate = (Inflow - Outflow)/Inflow)
+
+most_pickups_ct <- subset(CH_net_inoutflow,CH_net_inoutflow$`Start Census Tract`==most_pickups)
+most_dropoffs_ct <- subset(CH_net_inoutflow,CH_net_inoutflow$`Start Census Tract`==most_dropoffs)
+max_inflow <- max(abs(CH_net_inoutflow$NetInflow))
+max_inflowRate <- max(abs(CH_net_inoutflow$NetInflowRate))
+# library(viridis)
+
+ggplot()+
+  geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=Outflow)) +
+  #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
+  #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
+  scale_fill_viridis()+
+  #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
+  labs(title='Outflow Map for Chicago, IL') +
+  mapTheme()
+
+ggplot()+
+  geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=Inflow)) +
+  #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
+  #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
+  scale_fill_viridis()+
+  #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
+  labs(title='Inflow Map for Chicago, IL') +
+  mapTheme()
+
+ggplot()+
+  geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=NetInflow)) +
+  geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
+  #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
+  scale_fill_viridis(limits=c(-max_inflow, max_inflow))+
+  #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
+  labs(title='Net Inflow Map for Chicago',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
+  mapTheme()
+
+ggplot()+
+  geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=NetInflowRate)) +
+  geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
+  #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
+  scale_fill_viridis(limits=c(-max_inflowRate, max_inflowRate))+
+  #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
+  labs(title='Net Inflow Rate Mapfor Chicago',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
+  mapTheme()
