@@ -24,8 +24,8 @@ glimpse(DC_scooter_data)
 DC_scooter_2019 <- DC_scooter_data %>%
   filter(year(`original_start_time`) == 2019)
 
-DC_scooter_07to09 <- DC_scooter_2019 %>%
-  filter(month(`original_start_time`) > 6 & month(`original_start_time`) < 10)
+DC_scooter_07to09 <- DC_scooter_data %>%
+  filter(year(`original_start_time`) == 2019, month(`original_start_time`) > 6 & month(`original_start_time`) < 10)
 
 # Make sf objects ----
 make_DC_sf <- function(x, # x should be 'DC_scooter_data'

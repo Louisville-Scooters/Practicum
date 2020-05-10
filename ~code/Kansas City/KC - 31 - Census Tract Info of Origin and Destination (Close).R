@@ -31,35 +31,56 @@ KC_scooter_ct <- readRDS(KC_scooter_ct_RDS)
 # saveRDS(KC_scooter_ct,
 #         file = KC_scooter_ct_RDS)
 
+KC_scooter_07to09 <- KC_scooter_ct %>%
+  filter(year(start_time) == 2019, month(start_time) > 6 & month(start_time) < 10)
+
 
 # plot net inflow/outflow
 
-KC_ORIGINS <- KC_scooter_ct %>%
+KC_ORIGINS <- KC_scooter_07to09 %>%
                     group_by(Start.Census.Tract) %>% 
-                    summarise(Origins = n()) %>%
+                    summarise(Outflow = n()) %>%
   na.omit()
 
-KC_DESTS <- KC_scooter_ct %>%
+KC_DESTS <- KC_scooter_07to09 %>%
   group_by(End.Census.Tract) %>% 
-  summarise(Dests = n()) %>%
+  summarise(Inflow = n()) %>%
   na.omit()
 
 KC_net_inoutflow <- merge(KC_ORIGINS %>% st_set_geometry(NULL), KC_DESTS %>% st_set_geometry(NULL), all = T, by.x='Start.Census.Tract', by.y='End.Census.Tract')
 KC_net_inoutflow[is.na(KC_net_inoutflow)] <- 0
 KC_net_inoutflow <- KC_net_inoutflow %>%
-  mutate(NetInflow = Dests - Origins) %>%
+  mutate(NetInflow = Inflow - Outflow) %>%
   merge(KC_Census_geoinfo %>% dplyr::select(GEOID, geometry), by.x='Start.Census.Tract', by.y='GEOID')
-most_pickups <- KC_net_inoutflow$Start.Census.Tract[KC_net_inoutflow$Origins==max(KC_net_inoutflow$Origins)]
-most_dropoffs <- KC_net_inoutflow$Start.Census.Tract[KC_net_inoutflow$Dests==max(KC_net_inoutflow$Dests)]
+most_pickups <- KC_net_inoutflow$Start.Census.Tract[KC_net_inoutflow$Outflow==max(KC_net_inoutflow$Outflow)]
+most_dropoffs <- KC_net_inoutflow$Start.Census.Tract[KC_net_inoutflow$Inflow==max(KC_net_inoutflow$Inflow)]
 
 KC_net_inoutflow <- KC_net_inoutflow %>%
-  mutate(NetInflowRate = (Dests - Origins)/Dests)
+  mutate(NetInflowRate = (Inflow - Outflow)/Inflow)
   
 most_pickups_ct <- subset(KC_net_inoutflow,KC_net_inoutflow$Start.Census.Tract==most_pickups)
 most_dropoffs_ct <- subset(KC_net_inoutflow,KC_net_inoutflow$Start.Census.Tract==most_dropoffs)
 max_inflow <- max(abs(KC_net_inoutflow$NetInflow))
 max_inflowRate <- max(abs(KC_net_inoutflow$NetInflowRate))
 library(viridis)
+
+ggplot()+
+  geom_sf(data = st_sf(KC_net_inoutflow), aes(fill=Outflow)) +
+  #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
+  #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
+  scale_fill_viridis()+
+  #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
+  labs(title='Outflow Map for Kansas City, MO') +
+  mapTheme()
+
+ggplot()+
+  geom_sf(data = st_sf(KC_net_inoutflow), aes(fill=Inflow)) +
+  #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
+  #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
+  scale_fill_viridis()+
+  #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
+  labs(title='Inflow Map for Kansas City, MO') +
+  mapTheme()
 
 ggplot()+
   geom_sf(data = st_sf(KC_net_inoutflow), aes(fill=NetInflow)) +
