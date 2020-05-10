@@ -41,9 +41,14 @@ HS_trimmed <- st_read(HS_trimmed_RDS)
 
 # Jacksonville: 
 JV_trimmed <- JV_model_tract
+
+JV_trimmed2 <- left_join(JV_trimmed %>%dplyr::select(-PREDICTED.CNT), JV_result %>%dplyr::select(GEOID, Predicted.CNT) %>%st_set_geometry(NULL), by = "GEOID")
+JV_trimmed2 <- JV_trimmed2 %>%
+  rename_all(toupper) 
+
 JV_trimmed_RDS <- file.path(data_directory, "~RData/Jacksonville/JV_trimmed.GeoJSON")
-geojsonio::geojson_write(JV_trimmed, file = JV_trimmed_RDS)
-JV_trimmed <- st_read(JV_trimmed_RDS)
+geojsonio::geojson_write(JV_trimmed2, file = JV_trimmed_RDS)
+#JV_trimmed <- st_read(JV_trimmed_RDS)
 
 # Jersey City:
 JC_boundary_RDS <- file.path(data_directory, "~RData/Jersey City/police-districts.GeoJSON")
@@ -56,6 +61,10 @@ JC_trimmed <- JC_model_tract %>%
 ggplot() +
   geom_sf(data = JC_trimmed, fill = "white")+
   geom_sf(data = JC_boundary, fill = "yellow")
+
+JC_trimmed2 <- left_join(JC_trimmed %>%dplyr::select(-PREDICTED.CNT), JC_result %>%dplyr::select(GEOID, Predicted.CNT) %>%st_set_geometry(NULL), by = "GEOID")
+JC_trimmed2 <- JC_trimmed2 %>%
+  rename_all(toupper) 
 
 JC_trimmed_RDS <- file.path(data_directory, "~RData/Jersey City/JC_trimmed.GeoJSON")
 geojsonio::geojson_write(JC_trimmed, file = JC_trimmed_RDS)

@@ -622,6 +622,6 @@ SY_model_tract <- SY_model_tract %>%
 SY_model_tract_RDS <- file.path(data_directory, "~RData/Syracuse/SY_model_tract.GeoJSON")
 geojsonio::geojson_write(SY_model_tract, file = SY_model_tract_RDS)
 
-sum(SY_trimmed$TOTPOP)
-sum(SY_trimmed$PREDICTED.CNT)
+sum(SA_trimmed$TOTPOP)
+sum(JC_trimmed$PREDICTED.CNT)
 sum(SY_trimmed$JOBS_IN_TRACT)
