@@ -535,3 +535,93 @@ RL_model_tract <- RL_model_tract %>%
 RL_model_tract_RDS <- file.path(data_directory, "~RData/Raleigh/RL_model_tract.GeoJSON")
 geojsonio::geojson_write(RL_model_tract, file = RL_model_tract_RDS)
 
+
+### San Antonio ####
+SA_model_tract <- merge(SA_result %>%dplyr::select(-centroid_X, -centroid_Y), SA_model, by = "GEOID")
+SA_model_tract <- SA_model_tract %>% 
+  rename_all(toupper) 
+
+SA_model_tract <- SA_model_tract %>% st_transform(4326)
+
+SA_model_tract$PREDICTED.CNT[is.na(SA_model_tract$PREDICTED.CNT)] <- 0
+SA_model_tract$PREDICTED.CNT <- as.numeric(SA_model_tract$PREDICTED.CNT)
+
+SA_model_tract[is.na(SA_model_tract)] <- 0
+SA_model_tract <- SA_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+SA_model_tract <- SA_model_tract %>%
+  mutate(TILE_PRED = ntile(PREDICTED.CNT, 100),
+         TILE_POP = ntile(TOTPOP, 100),
+         TILE_CSA30 = ntile(PCOM30PLUS, 100),
+         TILE_DRIVE = ntile(PDRIVE, 100),
+         TILE_TRANS = ntile(PTRANS, 100),
+         TILE_JOBS = ntile(JOBS_IN_TRACT, 100),
+         TILE_INC = ntile(MDHHINC, 100),
+         TILE_RENT = ntile(MEDRENT, 100),
+         TILE_VALUE = ntile(MEDVALUE, 100),
+         TILE_HU = ntile(TOTHSEUNI, 100),
+         TILE_WHITE = ntile(PWHITE, 100))
+
+SA_model_tract_RDS <- file.path(data_directory, "~RData/San Antonio/SA_model_tract.GeoJSON")
+geojsonio::geojson_write(SA_model_tract, file = SA_model_tract_RDS)
+
+### Syracuse ####
+SY_spatial_census_RDS <- file.path(data_directory, "~RData/Syracuse/SY_spatial_census")
+SY_spatial_census <- readRDS(SY_spatial_census_RDS)
+SY_LODES_RDS <- file.path(data_directory, "~RData/Syracuse/SY_LODES")
+SY_LODES <- readRDS(SY_LODES_RDS)
+
+SY_model <- merge(SY_spatial_census, SY_LODES, by.x = 'GEOID', by.y = 'geocode')
+SY_model <- SY_model %>%
+  st_set_geometry(NULL)
+SY_model <- SY_model %>% 
+  rename_all(toupper) 
+
+SY_result_RDS <- file.path(data_directory, "~RData/Syracuse/SY_result")
+SY_result <- readRDS(SY_result_RDS)
+
+SY_model_tract <- merge(SY_result %>%dplyr::select(-centroid_X, -centroid_Y), SY_model, by = "GEOID")
+SY_model_tract <- SY_model_tract %>% 
+  rename_all(toupper) 
+
+SY_model_tract <- SY_model_tract %>% st_transform(4326)
+
+SY_model_tract$PREDICTED.CNT[is.na(SY_model_tract$PREDICTED.CNT)] <- 0
+SY_model_tract$PREDICTED.CNT <- as.numeric(SY_model_tract$PREDICTED.CNT)
+
+SY_model_tract[is.na(SY_model_tract)] <- 0
+SY_model_tract <- SY_model_tract %>%
+  mutate(PWHITE = PWHITE*100,
+         PTRANS = PTRANS*100,
+         PDRIVE = PDRIVE*100,
+         PFEMALE = PFEMALE*100,
+         PCOM30PLUS = PCOM30PLUS*100,
+         POCCUPIED = POCCUPIED*100,
+         PVEHAVAI = PVEHAVAI*100)
+
+SY_model_tract <- SY_model_tract %>%
+  mutate(TILE_PRED = ntile(PREDICTED.CNT, 100),
+         TILE_POP = ntile(TOTPOP, 100),
+         TILE_CSY30 = ntile(PCOM30PLUS, 100),
+         TILE_DRIVE = ntile(PDRIVE, 100),
+         TILE_TRANS = ntile(PTRANS, 100),
+         TILE_JOBS = ntile(JOBS_IN_TRACT, 100),
+         TILE_INC = ntile(MDHHINC, 100),
+         TILE_RENT = ntile(MEDRENT, 100),
+         TILE_VALUE = ntile(MEDVALUE, 100),
+         TILE_HU = ntile(TOTHSEUNI, 100),
+         TILE_WHITE = ntile(PWHITE, 100))
+
+SY_model_tract_RDS <- file.path(data_directory, "~RData/Syracuse/SY_model_tract.GeoJSON")
+geojsonio::geojson_write(SY_model_tract, file = SY_model_tract_RDS)
+
+sum(SA_trimmed$TOTPOP)
+sum(JC_trimmed$PREDICTED.CNT)
+sum(SY_trimmed$JOBS_IN_TRACT)

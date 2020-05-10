@@ -49,7 +49,7 @@ ggplot() +
   mapTheme()
 
 
-SA_result_RDS <- file.path(data_directory, "~RData/San Antonuo/SA_result")
+SA_result_RDS <- file.path(data_directory, "~RData/San Antonio/SA_result")
 saveRDS(SA_result,
         file = SA_result_RDS)
 SA_result <- readRDS(SA_result_RDS)
