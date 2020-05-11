@@ -53,3 +53,15 @@ JC_result_RDS <- file.path(data_directory, "~RData/Jersey City/JC_result")
 saveRDS(JC_result,
         file = JC_result_RDS)
 JC_result <- readRDS(JC_result_RDS)
+
+predict_JC <- ggplot()+
+  geom_sf(data = JC_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Jersey City, NJ') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_JC.png"),
+       plot = predict_JC,
+       width = 6,
+       units = "in")

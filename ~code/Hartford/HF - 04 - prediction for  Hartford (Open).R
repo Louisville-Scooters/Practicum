@@ -53,3 +53,15 @@ HF_result_RDS <- file.path(data_directory, "~RData/Hartford/HF_result")
 # saveRDS(HF_result,
 #         file = HF_result_RDS)
 HF_result <- readRDS(HF_result_RDS)
+
+predict_HF <- ggplot()+
+  geom_sf(data = HF_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Hartford, CT') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_HF.png"),
+       plot = predict_HF,
+       width = 6,
+       units = "in")

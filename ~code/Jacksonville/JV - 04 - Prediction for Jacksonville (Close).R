@@ -53,3 +53,15 @@ JV_result_RDS <- file.path(data_directory, "~RData/Jacksonville/JV_result")
 # saveRDS(JV_result,
 #         file = JV_result_RDS)
 JV_result <- readRDS(JV_result_RDS)
+
+predict_JV <- ggplot()+
+  geom_sf(data = JV_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Jacksonville, FL') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_JV.png"),
+       plot = predict_JV,
+       width = 6,
+       units = "in")

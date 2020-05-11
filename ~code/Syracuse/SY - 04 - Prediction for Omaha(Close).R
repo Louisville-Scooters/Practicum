@@ -27,7 +27,7 @@ SY_model <- SY_model %>%
 SY_result <- merge(SY_Census_geoinfo, SY_model %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
 
 ###### race content ##########
-SY_result <- merge(SY_result, as.data.frame(MD_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
+SY_result <- merge(SY_result, as.data.frame(SY_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
 SY_result <- mutate(SY_result, race = ifelse(pWhite > .5, "Majority_White", "Majority_Non_White"))
 
 SY_result %>%
@@ -53,3 +53,15 @@ ggplot() +
 # saveRDS(SY_result,
 #         file = SY_result_RDS)
 SY_result <- readRDS(SY_result_RDS)
+
+predict_SY <- ggplot()+
+  geom_sf(data = SY_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Syracuse, NY') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_SY.png"),
+       plot = predict_SY,
+       width = 6,
+       units = "in")

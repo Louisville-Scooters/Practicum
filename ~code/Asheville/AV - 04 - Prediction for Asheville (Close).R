@@ -53,3 +53,14 @@ AV_result_RDS <- file.path(data_directory, "~RData/Asheville/AV_result")
 # saveRDS(AV_result,
 #         file = AV_result_RDS)
 AV_result <- readRDS(AV_result_RDS)
+predict_AV <- ggplot()+
+  geom_sf(data = AV_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Asheville, NC') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_AV.png"),
+       plot = predict_AV,
+       width = 6,
+       units = "in")

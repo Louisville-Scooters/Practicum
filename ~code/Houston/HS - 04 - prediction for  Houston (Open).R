@@ -53,3 +53,15 @@ HS_result_RDS <- file.path(data_directory, "~RData/Houston/HS_result")
 saveRDS(HS_result,
         file = HS_result_RDS)
 HS_result <- readRDS(HS_result_RDS)
+
+predict_HS <- ggplot()+
+  geom_sf(data = HS_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Houston, TX') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_HS.png"),
+       plot = predict_HS,
+       width = 6,
+       units = "in")
