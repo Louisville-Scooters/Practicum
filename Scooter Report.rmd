@@ -680,20 +680,52 @@ ggplot(LV_rebal_sf_list_summary_2_map,
 
 We used the final set of features to construct several models that predict raw trip counts in each census tract for the cities in our study. We employed the following modeling frameworks:
 
-* **Linear Model:** a simple OLS linear regression
-* **Penalized Linear Model:**  
-* **Random Forest:** an ensemble method that aggregates predictions many decision trees for classification or regression tasks. It employs bagging (bootstrap aggregation) to protect against overfitting the decision trees to the training data.
-* **XGBoost:** another tree-based ensemble method. Unlike random forest, which creates many trees at once and aggregates their results at the end, this method builds trees iteratively, employs boosting in the bagging process to address large prediction errors in previous trees.
+* **Linear Model:** an OLS linear regression
+* **Penalized Linear Model:** a linear regression model that uses regularization to prevent overfitting to insignificant predictor variables. During model tuning, we tested L1, L2, and elastic net regularization.
+* **Random Forest:** an ensemble method that aggregates predictions from many decision trees for classification or regression tasks. It employs bagging (bootstrap aggregation) to protect against overfitting the decision trees to the training data.
+* **XGBoost:** another tree-based ensemble method. Unlike random forest, which creates many trees at once and aggregates their results at the end, this method builds trees iteratively, employing boosting in the bagging process to address large prediction errors in previous trees.
 
-%%[More details about the process:
-- How did we split up the training/test sets? Percentages. Stratification strategy.
-- How did we select hyperparameters?]%%
+The graphic below helps to visualize our model selection process. First, we split the data into a 75%/25% training set and test set, stratified across the six cities. Within the 75% training set, we then used a grid search to select the optimal hyperparameters for each modeling framework. To improve the robustness of the grid search, we used both random k-fold (across 20 folds) and leave-one-group-out (leaving one city out at a time) cross-validation within the training set. In this cross-validation process, each fold or city within the training set is held out while the grid search is run over the remaining folds or cities to select hyperparameters. Predictions are then produced on the hold-out fold or city, and the root mean squared error (RMSE) is calculated for those predictions (out-of-fold error). This process is repeated on each fold and city, and for each modeling framework, we select the hyperparameters for each modeling framework that minimizes the average of RMSEs across folds. Finally, we test these models on the 25% test set and select the framework with the lowest mean absolute error (MAE). 
+
+```{r, echo = FALSE, out.height="40%", out.width="80%"}
+include_graphics(c("Markdown_plots/5.1 Model infographic.png"))
+```
 
 ## 5.2 Model Evaluation
 
-We evaluated each model by measuring its Mean Absolute Error on out-of-fold predictions. As shown by the error rates below, the random forest model had the best performance, but errors in general were quite high. This reflects the difficulty of using a fairly small sample of diverse cities to make predictions of raw ridership counts. 
+The plots below show the average MAE and RMSE produced on out-of-group predictions produced using the optimized hyperparameters for each modeling framework. Interestingly, the random forest model had the best performance in terms of MAE but performed poorly in terms of RMSE. Our interpretation of this is that the random forest model was predicting well for many census tracts compared to the other frameworks, but there were a few predictions with very large errors that drove up the RMSE, which is more sensitive to outliers than MAE.  In general, the errors were quite high. This reflects the difficulty of using a fairly small sample of cities that vary greatly to make predictions of raw ridership counts.
+
+**Average RMSE and MAE for Out-of-fold Predictions**
+
+```{r, echo = FALSE, out.height="40%", out.width="80%"}
+include_graphics(c("Markdown_plots/5.2 RMSEbyModels_OOF.png", "Markdown_plots/5.2 MAEbyModels_OOF.png"))
+```
+
+Below, we present scatter plots showing the out-of-fold and out-of-city predictions and errors for each method. We see that errors were larger in general for the out-of-city predictions, again demonstrating the challenge of generalizing ridership predictions across cities with such different characteristics.
+
+```{r, echo = FALSE, out.height="40%", out.width="80%"}
+include_graphics(c("Markdown_plots/5.2 OOF predicted versus actual (city).png", "Markdown_plots/5.2 MAEbyModels_OOF.png"))
+```
+
+We next plot the MAEs for each model’s predictions on the 25% test set. While we used RMSE for optimizing the models in an attempt to limit extreme outliers, we choose to present MAEs below because they are easier to interpret.  
+
+**MAE for Test Set Predictions**
+
+```{r, echo = FALSE, out.height="40%", out.width="80%"}
+include_graphics(c("Markdown_plots/5.2 MAEbyModels_valiadation_set.png"))
+```
+
+Below, we show an example of the out-of-fold predictions and prediction errors made on Austin when it was treated as a hold-out group in cross-validation. Note that the "missing" census tracts in the map below represented those tracts that had been randomly selected for the 25% testing set. We see that ridership was drastically underestimated in a couple downtown census tracts.
+
+%%[Map of Austin predictions]%%
+
+```{r, echo = FALSE, out.height="40%", out.width="80%"}
+# include_graphics(c("Markdown_plots/5.2 MAEbyModels_valiadation_set.png"))
+```
 
 
+
+## 5.3 Predictions
 
 # 6. Equity of Access
 
@@ -701,3 +733,4 @@ We evaluated each model by measuring its Mean Absolute Error on out-of-fold pred
 
 https://ophelialyj.github.io/MUSA_practicum_scooter/#!/
 
+# 8. Code Appendix
