@@ -323,13 +323,39 @@ OOF_preds <- rbind(data.frame(dplyr::select(lm_best_OOF_preds, .pred, ORIGINS_CN
 library(ggsn)
 
 # average error for each model
-ggplot(data = OOF_preds %>% 
-         dplyr::select(model, MAPE) %>% 
+RMSEbyModels_OOF <- ggplot(data = OOF_preds %>% 
+         dplyr::select(model, RMSE) %>% 
          distinct() , 
-       aes(x = model, y = MAPE, group = 1)) +
+       aes(x = model, y = RMSE, group = 1)) +
   geom_path(color = "red") +
-  geom_label(aes(label = paste0(round(MAPE,1),"%"))) +
+  geom_label(aes(label = round(RMSE,1))) +
+  labs(title='RMSE by model type') +
   theme_bw()
+
+MAEbyModels_OOF <- ggplot(data = OOF_preds %>% 
+         dplyr::select(model, MAE) %>% 
+         distinct() , 
+       aes(x = model, y = MAE, group = 1)) +
+  geom_path(color = "red") +
+  geom_label(aes(label = round(MAE,1))) +
+  geom_hline(yintercept=mean(val_preds$ORIGINS_CNT), linetype="dashed") +
+  labs(title='MAE by model type') +
+  theme_bw()
+
+ggsave(file.path(plot_directory,
+                 "5.2 RMSEbyModels_OOF.png"),
+       plot = RMSEbyModels_OOF,
+       height = 6,
+       width = 10,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "5.2 MAEbyModels_OOF.png"),
+       plot = MAEbyModels_OOF,
+       height = 6,
+       width = 10,
+       units = "in")
+
 
 # OOF predicted versus actual
 ggplot(OOF_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
@@ -375,13 +401,38 @@ val_preds <- rbind(data.frame(lm_val_pred_geo, model = "lm"),
   ungroup()
 
 # plot MAPE by model type
-ggplot(data = val_preds %>% 
-         dplyr::select(model, MAPE) %>% 
+RMSEbyModels_valiadation_set <- ggplot(data = val_preds %>% 
+         dplyr::select(model, RMSE) %>% 
          distinct() , 
-       aes(x = model, y = MAPE, group = 1)) +
+       aes(x = model, y = RMSE, group = 1)) +
   geom_path(color = "red") +
-  geom_label(aes(label = paste0(round(MAPE,1),"%"))) +
+  geom_label(aes(label = round(RMSE,1))) +
+  labs(title='RMSE by model type') +
   theme_bw()
+
+MAEbyModels_valiadation_set <- ggplot(data = val_preds %>% 
+                                         dplyr::select(model, MAE) %>% 
+                                         distinct() , 
+                                       aes(x = model, y = MAE, group = 1)) +
+  geom_path(color = "red") +
+  geom_label(aes(label = round(MAE,1))) +
+  labs(title='MAE by model type') +
+  geom_hline(yintercept=mean(val_preds$ORIGINS_CNT), linetype="dashed") +
+  theme_bw()
+
+ggsave(file.path(plot_directory,
+             "5.2 RMSEbyModels_valiadation_set.png"),
+       plot = RMSEbyModels_valiadation_set,
+       height = 6,
+       width = 10,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "5.2 MAEbyModels_valiadation_set.png"),
+       plot = MAEbyModels_valiadation_set,
+       height = 6,
+       width = 10,
+       units = "in")
 
 # Validation Predicted vs. actual
 ggplot(val_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
