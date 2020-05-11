@@ -16,4 +16,4 @@ mean_MDAGE <- abs(dim(HS_trimmed_model %>% filter(MDAGE<mean(HS_top30_pc$MDAGE))
 #dim(HS_trimmed_model %>% filter(MDHHINC<mean(HS_top30_pc$MDHHINC)))[1]/dim(HS_trimmed_model)[1] - dim(HS_trimmed_model %>% filter(MDHHINC<mean(HS_last30_pc$MDHHINC)))[1]/dim(HS_trimmed_model)[1]
 
 #calculate the equity index
-sum(mean_MEDHHINC, mean_PWHITE, mean_MDAGE)/3
+1-sum(mean_MEDHHINC, mean_PWHITE, mean_MDAGE)/3

@@ -55,13 +55,24 @@ saveRDS(SA_result,
 SA_result <- readRDS(SA_result_RDS)
 
 predict_SA <- ggplot()+
-  geom_sf(data = SA_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
-  scale_fill_viridis()+
+  geom_sf(data = SA_trimmed_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
+  scale_fill_viridis_d(labels=qBr(SA_trimmed_result,"Predicted.CNT"),name="Quintile\nBreaks")+
   labs(title = 'Predicted Trip Count for San Antonio, TX') +
   mapTheme()
 
 ggsave(file.path(plot_directory,
                  "5.3 predict_SA.png"),
        plot = predict_SA,
+       width = 6,
+       units = "in")
+
+Dist_SA <- ggplot()+
+  geom_histogram(data = as.data.frame(SA_trimmed_result) %>% na.omit(), aes(round(Predicted.CNT)), fill='#453781FF', bins=30) +
+  labs(title='Distribution of Trip Count in San Antonio', x='Predicted trip count') +
+  plotTheme
+
+ggsave(file.path(plot_directory,
+                 "5.3 Dist_SA.png"),
+       plot = Dist_SA,
        width = 6,
        units = "in")

@@ -55,13 +55,25 @@ saveRDS(JC_result,
 JC_result <- readRDS(JC_result_RDS)
 
 predict_JC <- ggplot()+
-  geom_sf(data = JC_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
-  scale_fill_viridis()+
+  geom_sf(data = JC_trimmed_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
+  scale_fill_viridis_d(labels=qBr(JC_trimmed_result,"Predicted.CNT"),name="Quintile\nBreaks")+
   labs(title = 'Predicted Trip Count for Jersey City, NJ') +
   mapTheme()
 
 ggsave(file.path(plot_directory,
                  "5.3 predict_JC.png"),
        plot = predict_JC,
+       width = 6,
+       units = "in")
+
+
+Dist_JC <- ggplot()+
+  geom_histogram(data = as.data.frame(JC_trimmed_result) %>% na.omit(), aes(round(Predicted.CNT)), fill='#453781FF', bins=30) +
+  labs(title='Distribution of Trip Count in Jersey City', x='Predicted trip count') +
+  plotTheme
+
+ggsave(file.path(plot_directory,
+                 "5.3 Dist_JC.png"),
+       plot = Dist_JC,
        width = 6,
        units = "in")

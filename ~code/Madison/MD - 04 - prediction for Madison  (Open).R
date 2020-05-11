@@ -81,13 +81,24 @@ ggplot() +
 MD_result <- readRDS(MD_result_RDS)
 
 predict_MD <- ggplot()+
-  geom_sf(data = MD_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
-  scale_fill_viridis()+
+  geom_sf(data = MD_trimmed_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
+  scale_fill_viridis_d(labels=qBr(MD_trimmed_result,"Predicted.CNT"),name="Quintile\nBreaks")+
   labs(title = 'Predicted Trip Count for Madison, WI') +
   mapTheme()
 
 ggsave(file.path(plot_directory,
                  "5.3 predict_MD.png"),
        plot = predict_MD,
+       width = 6,
+       units = "in")
+
+Dist_MD <- ggplot()+
+  geom_histogram(data = as.data.frame(MD_trimmed_result) %>% na.omit(), aes(round(Predicted.CNT)), fill='#453781FF', bins=30) +
+  labs(title='Distribution of Trip Count in Madison', x='Predicted trip count') +
+  plotTheme
+
+ggsave(file.path(plot_directory,
+                 "5.3 Dist_MD.png"),
+       plot = Dist_MD,
        width = 6,
        units = "in")

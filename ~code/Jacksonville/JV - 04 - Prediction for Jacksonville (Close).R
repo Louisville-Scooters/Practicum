@@ -55,13 +55,24 @@ JV_result_RDS <- file.path(data_directory, "~RData/Jacksonville/JV_result")
 JV_result <- readRDS(JV_result_RDS)
 
 predict_JV <- ggplot()+
-  geom_sf(data = JV_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
-  scale_fill_viridis()+
+  geom_sf(data = JV_trimmed_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
+  scale_fill_viridis_d(labels=qBr(JV_trimmed_result,"Predicted.CNT"),name="Quintile\nBreaks")+
   labs(title = 'Predicted Trip Count for Jacksonville, FL') +
   mapTheme()
 
 ggsave(file.path(plot_directory,
                  "5.3 predict_JV.png"),
        plot = predict_JV,
+       width = 6,
+       units = "in")
+
+Dist_JV <- ggplot()+
+  geom_histogram(data = as.data.frame(JV_trimmed_result) %>% na.omit(), aes(round(Predicted.CNT)), fill='#453781FF', bins=30) +
+  labs(title='Distribution of Trip Count in Jacksonville', x='Predicted trip count') +
+  plotTheme
+
+ggsave(file.path(plot_directory,
+                 "5.3 Dist_JV.png"),
+       plot = Dist_JV,
        width = 6,
        units = "in")

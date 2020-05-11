@@ -55,13 +55,24 @@ ggplot() +
 SY_result <- readRDS(SY_result_RDS)
 
 predict_SY <- ggplot()+
-  geom_sf(data = SY_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
-  scale_fill_viridis()+
+  geom_sf(data = SY_trimmed_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
+  scale_fill_viridis_d(labels=qBr(SY_trimmed_result,"Predicted.CNT"),name="Quintile\nBreaks")+
   labs(title = 'Predicted Trip Count for Syracuse, NY') +
   mapTheme()
 
 ggsave(file.path(plot_directory,
                  "5.3 predict_SY.png"),
        plot = predict_SY,
+       width = 6,
+       units = "in")
+
+Dist_SY <- ggplot()+
+  geom_histogram(data = as.data.frame(SY_trimmed_result) %>% na.omit(), aes(round(Predicted.CNT)), fill='#453781FF', bins=30) +
+  labs(title='Distribution of Trip Count in Syracuse', x='Predicted trip count') +
+  plotTheme
+
+ggsave(file.path(plot_directory,
+                 "5.3 Dist_SY.png"),
+       plot = Dist_SY,
        width = 6,
        units = "in")

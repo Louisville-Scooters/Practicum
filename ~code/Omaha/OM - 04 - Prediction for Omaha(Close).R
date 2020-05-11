@@ -55,13 +55,24 @@ OM_result_RDS <- file.path(data_directory, "~RData/Omaha/OM_result")
 OM_result <- readRDS(OM_result_RDS)
 
 predict_OM <- ggplot()+
-  geom_sf(data = OM_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
-  scale_fill_viridis()+
+  geom_sf(data = OM_trimmed_result %>% na.omit(), aes(fill=q5(Predicted.CNT))) +
+  scale_fill_viridis_d(labels=qBr(OM_trimmed_result,"Predicted.CNT"),name="Quintile\nBreaks") +
   labs(title = 'Predicted Trip Count for Omaha, NE') +
   mapTheme()
 
 ggsave(file.path(plot_directory,
                  "5.3 predict_OM.png"),
        plot = predict_OM,
+       width = 6,
+       units = "in")
+
+Dist_OM <- ggplot()+
+  geom_histogram(data = as.data.frame(OM_trimmed_result) %>% na.omit(), aes(round(Predicted.CNT)), fill='#453781FF', bins=30) +
+  labs(title='Distribution of Trip Count in Omaha', x='Predicted trip count') +
+  plotTheme
+
+ggsave(file.path(plot_directory,
+                 "5.3 Dist_OM.png"),
+       plot = Dist_OM,
        width = 6,
        units = "in")
