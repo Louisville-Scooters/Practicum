@@ -817,3 +817,4580 @@ include_graphics(c("Markdown_plots/5.3 predict_SY.png"))
 https://ophelialyj.github.io/MUSA_practicum_scooter/#!/
 
 # 8. Code Appendix
+
+### 8.1 Load packages and define helper functions and objects
+
+```{r, echo = TRUE, eval = FALSE}
+# Data Directory and Working Directory
+data_directory <- file.path(stringr::str_remove(here::here(), 
+                                                "\\/Eugene\\/Eugene - Practicum|\\/Ophelia\\/Ophelia - Practicum|\\/Xinyi\\/Xinyi - Practicum"), 
+                        "~data")
+
+setwd(here::here())
+
+# Scientific Notation
+options(scipen = 999)
+
+# For flow map
+options(repos = c(CRAN = "http://www.stats.bris.ac.uk/R/"))
+
+# Load Packages
+library(sf)
+library(measurements)
+library(tidycensus)
+library(tidyverse)
+library(tmap)
+library(lubridate)
+library(knitr)
+library(kableExtra)
+library(rgeos)
+library(raster)
+library(spatstat)
+library(data.table)
+library(janitor)
+library(vroom)
+library(here)
+library(dplyr)
+library(sp)
+library(viridis)
+library(maptools)
+library(stringr)
+library(grid)
+library(gridExtra)
+library(corrplot)
+library(osmdata)
+library(FNN)
+library(janitor)
+library(caret)
+library(furrr)
+library(ggplot2)
+library(rsample)
+library(recipes)
+library(parsnip)
+library(workflows)
+library(tune)
+library(yardstick)
+library(ranger)
+library(xgboost)
+library(ggsn)
+
+# Palettes and Themes
+paletteY <- c("#F9F871","#FFD364","#FFAF6D","#FF8F80","#F87895", "D16BA5")
+palette5 <- c("#25CB10", "#5AB60C", "#8FA108","#C48C04", "#FA7800")
+
+plotTheme <- theme(
+  plot.title =element_text(size=15),
+  plot.subtitle = element_text(size=8),
+  plot.caption = element_text(size = 6),
+  axis.text.x = element_text(size = 10, hjust = 1),
+  axis.text.y = element_text(size = 10),
+  axis.title.y = element_text(size = 10),
+  # Set the entire chart region to blank
+  panel.background=element_blank(),
+  plot.background=element_blank(),
+  #panel.border=element_rect(colour="#F0F0F0"),
+  # Format the grid
+  panel.grid.major=element_line(colour="#D0D0D0",size=.2),
+  axis.ticks=element_blank())
+
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 14,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2)
+  )
+}
+
+# Helper functions
+qBr <- function(df, variable, rnd) {
+  if (missing(rnd)) {
+    as.character(quantile(round(df[[variable]],0),
+                          c(.01,.2,.4,.6,.8), na.rm=T))
+  } else if (rnd == FALSE | rnd == F) {
+    as.character(formatC(quantile(df[[variable]]), digits = 3),
+                 c(.01,.2,.4,.6,.8), na.rm=T)
+  }
+}
+
+q5 <- function(variable) {as.factor(ntile(variable, 5))}
+
+# Projections
+DC_proj <- 2283 # Northern Virginia: https://epsg.io/2283
+LV_proj <- 2246 # https://www.spatialreference.org/ref/epsg/2246/
+KC_proj <-2817 # https://spatialreference.org/ref/epsg/2817/
+MNP_proj <- 2812 # https://www.spatialreference.org/ref/epsg/2812/
+AU_proj <- 2246 
+CH_proj <- 3529 #https://www.spatialreference.org/ref/?search=Illinois
+
+PH_proj <- 2272
+```
+
+### 8.2 Define Census variables and helper functions
+
+```{r, echo = TRUE, eval = FALSE}
+# List of 2018 ACS variables: https://api.census.gov/data/2018/acs/acs5/variables.html
+census_df <- data.frame(vars =     c("B01003_001E", 
+                                     "B01001_026E",
+                                     "B00002_001E",
+                                     "B19013_001E", 
+                                     "B01002_001E", 
+                                     "B02001_002E",
+                                     "B08014_001E",
+                                     "B08014_002E",
+                                     "B08013_001E",
+                                     "B08012_001E",
+                                     "B08012_008E",
+                                     "B08012_009E",
+                                     "B08012_010E",
+                                     "B08012_011E",
+                                     "B08012_012E",
+                                     "B08012_013E",
+                                     "B08301_001E",
+                                     "B08301_002E",
+                                     "B08301_010E",
+                                     "B25002_001E",
+                                     "B25002_002E",
+                                     "B25077_001E",
+                                     "B25064_001E"),
+                        
+                        colNames = c("TotPop",
+                                     "TotFemale",
+                                     "TotHseUni",
+                                     "MdHHInc",
+                                     "MdAge",
+                                     "White_Pop",
+                                     "Vehicle_own_pop",
+                                     "No_vehicle",
+                                     "Total_Travel_Time",
+                                     "Travel_Time_3034",
+                                     "Travel_Time_3539",
+                                     "Travel_Time_4044",
+                                     "Travel_Time_4559",
+                                     "Travel_Time_6089",
+                                     "Travel_Time_90plus",
+                                     "Num_Commuters",
+                                     "Means_of_Transport_pop",
+                                     "Total_cartruckvan",
+                                     "Total_Public_Trans",
+                                     "Total_occupancy",
+                                     "Occupied",
+                                     "MedValue",
+                                     "MedRent"),
+                        stringsAsFactors = FALSE)
+
+census_vars <- census_df$vars
+census_colNames <- census_df$colNames
+
+# Function for renaming columns after collecting census data
+rename_census_cols <- function(x){
+  
+  output <- x %>% 
+    rename_at(vars(census_vars), 
+              ~ census_colNames)
+  
+  output
+}
+```
+
+### 8.3 Read and clean scooter data for all cities
+
+#### Louisville
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in base map
+LV_base_map_raw <- st_read("https://opendata.arcgis.com/datasets/6e3dea8bd9cf49e6a764f7baa9141a95_30.geojson")
+
+# Read in service area
+LV_SA_file <- file.path(data_directory,
+                        "Dockless Vehicle Service Area/Dockless_Vehicle_Service_Area.shp")
+
+LV_SA_raw <- st_read(LV_SA_file)
+
+# Read in distribution areas
+LV_distro_areas_file <- file.path(data_directory,
+                             "Dockless Vehicle Distribution Zones v2/Dockless_Vehicle_Distribution_Zones.shp")
+
+LV_distro_areas_raw <- st_read(LV_distro_areas_file)
+
+# Read open data
+LV_open_raw <- read_csv("https://data.louisvilleky.gov/sites/default/files/DocklessTripOpenData_9.csv")
+
+# Read rebalance data
+LV_rebal_file <- file.path(data_directory, 
+                           "/Louisville-MDS-Status-Changes-2019Dec17.csv")
+
+LV_rebal_raw <- read_csv(LV_rebal_file)
+
+# Project Base Map
+LV_base_map <- LV_base_map_raw %>% 
+  st_transform(LV_proj)
+
+# Project Service Area Map
+LV_SA <- LV_SA_raw %>% 
+  st_transform(LV_proj)
+
+### Make rebalance sf object ----
+# Make the object with the code below ('ctrl + shift + c' to un-comment multiple lines at once)
+
+LV_rebal_sf <- st_as_sf(LV_rebal_raw,
+                            wkt = "location",
+                            crs = 4326) %>%
+  st_transform(LV_proj) %>%
+  mutate(occurredAt = with_tz(occurredAt, "America/New_York"),
+         operators = ifelse(operators == "Bolt Lousiville", # fix typo
+                            "Bolt Louisville",
+                            operators),
+         operators = as.factor(operators),
+         duration = 0, # initialize columns for for-loop
+         energy_diff = 0) %>%
+  .[LV_SA,] # filter out any trips outside the service area
+
+LV_rebal_sf_RDS <- file.path(data_directory, 
+                             "~RData/Louisville/LV_rebal_sf")
+# 
+# saveRDS(LV_rebal_sf,
+#         file = LV_rebal_sf_RDS)
+
+# Read the saved object with the code below
+# LV_rebal_sf <- readRDS(LV_rebal_sf_RDS)
+
+# Make sf objects with open data ----
+make_LV_open_sf <- function(x, # x should be 'LV_open_raw'
+                            trip_end, # define whether you want the origins or the destinations
+                            proj) { # proj should be 'LV_proj'
+  
+  if(!grepl("ori|des", trip_end)) {
+    
+    stop("trip_end must be either 'origins' or 'dests'")
+    
+  } else if (grepl("ori", trip_end)) {
+    
+    output <- x %>%
+      dplyr::select(TripID,
+                    StartLatitude,   
+                    StartLongitude,
+                    StartDate) %>% 
+      st_as_sf(coords = c("StartLongitude", "StartLatitude"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  } else {
+    
+    output <- x %>%
+      dplyr::select(TripID,
+                    EndLatitude,   
+                    EndLongitude, 
+                    StartDate) %>% 
+      st_as_sf(coords = c("EndLongitude", "EndLatitude"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  }
+  output
+}
+
+### Make and save open data origins ----
+LV_open_origins <- make_LV_open_sf(LV_open_raw,
+                                    trip_end = "origins",
+                                    proj = LV_proj) %>%
+   .[LV_SA,]
+
+# LV_open_origins_RDS <- file.path(data_directory, 
+#                              "~RData/Louisville/LV_open_origins")
+# 
+ # saveRDS(LV_open_origins,
+ #         file = LV_open_origins_RDS)
+
+# Read the saved object with the code below
+# LV_open_origins <- readRDS(LV_open_origins_RDS)
+
+
+### Make and save open data destinations ----
+LV_open_dests <- make_LV_open_sf(LV_open_raw,
+                                 trip_end = "dests",
+                                 proj = LV_proj) %>%
+  .[LV_SA,]
+
+# LV_open_dests_RDS <- file.path(data_directory, 
+#                                  "~RData/Louisville/LV_open_dests")
+
+# saveRDS(LV_open_dests,
+#         file = LV_open_dests_RDS)
+
+# Read the saved object with the code below
+# LV_open_dests <- readRDS(LV_open_dests_RDS)
+```
+
+#### DC
+
+```{r, echo = TRUE, eval = FALSE}
+# Set directory for DC data
+DC_directory <- paste(data_directory, 
+                        "/DC/",
+                        sep = "")
+
+# List of all scooter-related files
+DC_scooter_trip_list <- list.files(path = DC_directory,
+                                   pattern = "Lime|Bird|Scooters|skip|Spin|Razor|razor|Lyft")
+
+## Check that this covers all scooter files
+# DC_scooter_trip_list_b <- list.files(path = DC_directory) # all files in the folder
+# setdiff(DC_scooter_trip_list_b, DC_scooter_trip_list) # difference between all files and just scooter files
+
+DC_scooter_data_raw <- DC_scooter_trip_list %>%
+  {.[!str_detect(., "2019-09_Lime_trips.csv")]} %>%  # this particular record is tab-separated rather than comma-separated
+  {paste(DC_directory, ., sep = "")} %>% 
+  map_dfr(., 
+         ~ read_csv(.,
+                    col_types = cols(.default = "c")) %>% # read all the columns as characters for simplicity
+           set_names(., tolower(names(.))) %>% # some datasets have all caps columns, others have all lowercase
+           mutate(dataset = .x,
+                  dataset = str_match(dataset, paste(DC_directory, "(.*?)", "\\.csv", sep = ""))[, 2])) %>% 
+  bind_rows(., 
+            DC_scooter_trip_list %>%
+              {.[str_detect(., "2019-09_Lime_trips.csv")]} %>% # add in the tab-separated dataset
+              {paste(DC_directory, ., sep = "")} %>% 
+              read_tsv(col_types = cols(.default = "c")) %>% 
+              set_names(., tolower(names(.))) %>% 
+              mutate(dataset = "2019-09_Lime_trips"))
+
+# Add helper columns ----
+DC_scooter_data <- DC_scooter_data_raw %>% 
+  mutate(# this is the start time from the original data. Some data includes the date, but others only have the time
+    original_start_time = start_time,
+    company = tolower(str_extract(dataset, "Lime|Bird|JUMP|skip|Spin|Razor|razor|Lyft")),         
+    start_date = str_extract(original_start_time, "[0-9]{1,2}\\/[0-9]{1,2}\\/[0-9]{1,2}"),
+    start_time = str_extract(original_start_time, "[0-9]{1,2}:[0-9]{1,2}"),
+    original_end_time = end_time,
+    company = tolower(str_extract(dataset, "Lime|Bird|JUMP|skip|Spin|Razor|razor|Lyft")),         
+    end_date = str_extract(original_end_time, "[0-9]{1,2}\\/[0-9]{1,2}\\/[0-9]{1,2}"),
+    end_time = str_extract(original_end_time, "[0-9]{1,2}:[0-9]{1,2}"))
+
+DC_scooter_data$original_start_time <- as_datetime(DC_scooter_data$original_start_time)
+glimpse(DC_scooter_data)
+
+DC_scooter_2019 <- DC_scooter_data %>%
+  filter(year(`original_start_time`) == 2019)
+
+DC_scooter_07to09 <- DC_scooter_data %>%
+  filter(year(`original_start_time`) == 2019, month(`original_start_time`) > 6 & month(`original_start_time`) < 10)
+
+# Make sf objects ----
+make_DC_sf <- function(x, # x should be 'DC_scooter_data'
+                       trip_end, # define whether you want the origins or the destinations
+                       proj) { # proj should be 'DC_proj'
+  
+  if(!grepl("ori|des", trip_end)) {
+    
+    stop("trip_end must be either 'origins' or 'dests'")
+    
+  } else if (grepl("ori", trip_end)) {
+    
+    output <- x %>%
+      dplyr::select(trip_id,
+                    company,
+                    start_lat,   
+                    start_lon) %>% 
+      st_as_sf(coords = c("start_lon", "start_lat"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+    } else {
+    
+    output <- x %>%
+      dplyr::select(trip_id,
+                    company,
+                    end_lat,   
+                    end_lon) %>% 
+      st_as_sf(coords = c("end_lon", "end_lat"), 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+    }
+  output
+}
+
+# Example of make_DC_sf() function
+DC_scooter_07to09_sf <- make_DC_sf(DC_scooter_07to09, 
+                             trip_end = "origins", 
+                             proj = DC_proj)
+
+DC_scooter_07to09_sf <- merge(DC_scooter_07to09_sf, DC_scooter_07to09, by = 'trip_id')
+
+```
+
+#### Austin
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in Austin data
+Austin_file <- file.path(data_directory,
+                         "/Shared_Micromobility_Vehicle_Trips_austin.csv")
+
+AU_scooter_raw <- vroom(Austin_file,
+                        col_types = cols(.default = "c",
+                                         "Vehicle Type" = "f",
+                                         "Trip Duration" = "d",
+                                         "Trip Distance" = "d",
+                                         "Start Time" = "c",
+                                         "End Time" = "c",
+                                         "Modified Date" = "T",
+                                         "Month" = "f",
+                                         "Hour" = "d",
+                                         "Day of Week" = "f",
+                                         "Council District (Start)" = "f",
+                                         "Council District (End)" = "f",
+                                         "Year" = "d",
+                                         "Census Tract Start" = "c",
+                                         "Census Tract End" = "c"))
+
+AU_scooter_raw <- AU_scooter_raw[-1,] # na row
+AU_scooter_raw <- AU_scooter_raw[-1,] # problematic row
+AU_scooter_raw <- dplyr::select(AU_scooter_raw,-`Modified Date`) # NA COLUMN
+# format time columns
+AU_scooter_raw$`Start Time` <- as.POSIXct(AU_scooter_raw$`Start Time`, format='%m/%d/%Y %I:%M:%S %p')
+AU_scooter_raw$`End Time` <- as.POSIXct(AU_scooter_raw$`End Time`, format='%m/%d/%Y %I:%M:%S %p')
+
+AU_scooter <- AU_scooter_raw %>%
+  clean_names() %>% # lowercase column names and remove spaces
+  filter(vehicle_type == "scooter") # remove bike data
+#   
+# AU_scooter_RDS <- file.path(data_directory,
+#                             "~RData/Austin/AU_scooter")
+
+ # saveRDS(AU_scooter,
+ #         file = AU_scooter_RDS)
+
+# Read the saved object with the code below
+# AU_scooter <- readRDS(AU_scooter_RDS)
+# 
+# # glimpse(AU_scooter)
+# 
+AU_scooter_07to09 <- AU_scooter %>%
+  filter(month %in% c(7, 8, 9) & year == 2019)
+
+# AU_scooter_07to09_RDS <- file.path(data_directory,
+#                             "~RData/Austin/AU_scooter_07to09")
+
+# saveRDS(AU_scooter_07to09,
+#         file = AU_scooter_07to09_RDS)
+
+# AU_scooter_07to09 <- readRDS(AU_scooter_07to09_RDS)
+
+AU_open_origins_ct <- AU_scooter_07to09 %>% 
+  group_by(census_tract_start) %>%
+  summarize(origins_ct = n()/3)
+```
+
+#### Minneapolis
+
+```{r, echo = TRUE, eval = FALSE}
+# Set directory for DC data
+MNP_directory <- paste(data_directory, 
+                      "/MNP",
+                      sep = "")
+MNP_directory
+# List of all scooter-related files
+MNP_scooter_trip_list <- list.files(path = MNP_directory, pattern = "*.csv", full.names = T)
+
+MNP_scooter_trip_list
+MNP_scooter_data_raw <- MNP_scooter_trip_list %>% 
+  map_df(., 
+         ~ read_csv(.,
+                    col_types = cols(.default = "c")) %>% # read all the columns as characters for simplicity
+           set_names(., tolower(names(.))) %>%
+           mutate(dataset = .x,
+                  dataset = str_match(dataset, paste(MNP_directory, "(.*?)", "\\.csv", sep = ""))[, 2]))
+
+# Change the stattime and endtime to datetime object
+MNP_scooter_data_raw$starttime <- as_datetime(MNP_scooter_data_raw$starttime)
+MNP_scooter_data_raw$endtime <- as_datetime(MNP_scooter_data_raw$endtime)
+
+MNP_scooter_data_raw <- MNP_scooter_data_raw %>%
+  dplyr::select(-objectid)
+
+# Read street centerline shapefile
+MNP_ST_file <- file.path(MNP_directory,
+                         "PW_Street_Centerline/PW_Street_Centerline.shp")
+
+MNP_street <- st_read(MNP_ST_file) %>%
+  st_transform(MNP_proj)
+
+# Read trail centerline shapefile
+MNP_TR_file <- file.path(MNP_directory,
+                         "Pedestrian_and_Bicycle_Trails/Pedestrian_and_Bicycle_Trails.shp")
+
+MNP_Trail <- st_read(MNP_TR_file) %>%
+  st_transform(MNP_proj)
+
+# Read city boundary shapefile 
+MNP_ct_file <- file.path(MNP_directory,
+                         "MNP_CityLimits/msvcGIS_MinneapolisCityLimits.shp")
+
+MNP_ct <- st_read(MNP_ct_file) %>%
+  st_transform(MNP_proj)
+
+# Add helper columns ----
+MNP_scooter_data <- MNP_scooter_data_raw %>% 
+  mutate(# this is the start time from the original data. Some data includes the date, but others only have the time
+    start_date = date(starttime),
+    start_time = hour(starttime),
+    end_date = date(endtime),
+    end_time = hour(endtime))
+
+# Clean the MNP_street data
+MNP_street_sf <- MNP_street %>%
+  dplyr::select(NUM_WALKS, GBSID, BIKE_LANE, TRAFFIC_DI, SPEED_LIM, BUS_ROUTE, SNOW_EMERG, SEGMENT_LE, ROUTE_TYPE,
+                OFT, STREET_TYP, geometry)
+
+MNP_street_sf$GBSID <- as.character(MNP_street_sf$GBSID)
+
+MNP_street_unique <- MNP_street_sf[!duplicated(MNP_street_sf$GBSID),]
+
+MNP_street_unique <- MNP_street_unique %>%
+  mutate(centroid_X = st_coordinates(st_centroid(MNP_street_unique))[,1],
+         centroid_Y = st_coordinates(st_centroid(MNP_street_unique))[, 2])
+
+MNP_street_centroid <- st_as_sf(MNP_street_unique %>% st_set_geometry(NULL), coords = c('centroid_X', 'centroid_Y'), crs = 26849)
+
+# Trail
+MNP_Trail <- MNP_Trail %>%
+  mutate(centroid_X = st_coordinates(st_centroid(MNP_Trail))[,1],
+         centroid_Y = st_coordinates(st_centroid(MNP_Trail))[, 2])
+
+MNP_street_centroid <- st_as_sf(MNP_street_unique %>% st_set_geometry(NULL), coords = c('centroid_X', 'centroid_Y'), crs = 26849)
+
+
+# Keep 2019 July - September data only
+MNP_scooter_07to09 <- MNP_scooter_data %>%
+  filter(dataset == "/Motorized_Foot_Scooter_Trips_July_2019" |
+         dataset == "/Motorized_Foot_Scooter_Trips_August_2019" |
+           dataset == "/Motorized_Foot_Scooter_Trips_September_2019")
+
+# Join geographical information based on street centerline
+MNP_scooter_0619_ori <- merge(MNP_scooter_0619, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
+MNP_scooter_07to09_ori <- merge(MNP_scooter_07to09, MNP_street_centroid, by.x = 'startcenterlineid', by.y = 'GBSID')
+
+MNP_scooter_0619_ori <- st_as_sf(MNP_scooter_0619_ori, sf_column_name = 'geometry', crs=MNP_proj)
+MNP_scooter_07to09_ori <- st_as_sf(MNP_scooter_07to09_ori, sf_column_name = 'geometry', crs=MNP_proj)
+```
+
+#### Kansas City
+
+```{r, echo = TRUE, eval = FALSE}
+# Read open data
+KSC_file <- paste(data_directory, 
+                  "/Microtransit__Scooter_and_Ebike__Trips_ksc.csv",
+                  sep = "")
+
+KC_scooter_raw <- read_csv(KSC_file)
+
+# Make datetime columns
+KC_scooter <- KC_scooter_raw %>% 
+  mutate(start_time = as.POSIXct(paste(substring(.$`Start Date`, 1, 10), 
+                                       as.character(.$`Start Time`)),
+                                 format = '%m/%d/%Y %H:%M:%S'),
+         end_time =  as.POSIXct(paste(substring(.$`End Date`, 1, 10), 
+                                      as.character(.$`End Time`)),
+                                format = '%m/%d/%Y %H:%M:%S')) %>% 
+  dplyr::select(-c("Start Time", 
+                   "End Time",
+                   "Start Date",
+                   "End Date")) %>% 
+  clean_names() # remove spaces in column names and make lowercase
+
+# Make sf objects
+make_KC_sf <- function(x, # x should be 'KC_scooter'
+                       trip_end, # define whether you want the origins or the destinations
+                       proj) { # proj should be 'KC_proj'
+  
+  if(!grepl("ori|des", trip_end)) {
+    
+    stop("trip_end must be either 'origins' or 'dests'")
+    
+  } else if (grepl("ori", trip_end)) {
+    
+    output <- x %>%
+      dplyr::select(trip_id,
+                    start_location) %>% 
+      st_as_sf(wkt = "start_location", 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  } else {
+    
+    output <- x %>%
+      dplyr::select(trip_id,
+                    end_location) %>% 
+      st_as_sf(wkt = "end_location", 
+               crs = 4326) %>% 
+      st_transform(proj)
+    
+  }
+  output
+}
+```
+
+#### Chicago
+
+```{r, echo = TRUE, eval = FALSE}
+# Set directory for DC data
+CH_directory <- paste(data_directory, 
+                       "/Chicago",
+                       sep = "")
+CH_scooter_raw_file <- file.path(CH_directory, "E-Scooter_Trips_-_2019_Pilot.csv")
+
+# Read scooter raw data
+CH_scooter_raw <- read_csv(CH_scooter_raw_file)
+
+CH_scooter_clean <- CH_scooter_raw[!is.na(CH_scooter_raw$`Start Centroid Location`),]
+CH_scooter_clean <- CH_scooter_clean[!is.na(CH_scooter_clean$`End Centroid Location`),]
+CH_scooter_clean$`Start Time` <- as.POSIXct(CH_scooter_clean$`Start Time`, format='%m/%d/%Y %I:%M:%S %p')
+CH_scooter_clean$`End Time` <- as.POSIXct(CH_scooter_clean$`End Time`, format='%m/%d/%Y %I:%M:%S %p')
+names(CH_scooter_clean)
+
+CH_scooter_clean_ori <- st_as_sf(CH_scooter_clean, coords = c("Start Centroid Longitude", "Start Centroid Latitude"), 
+                 crs = 4326) %>% 
+  st_transform(CH_proj)
+
+CH_scooter_0619 <- CH_scooter_clean_ori %>%
+  filter(month(`Start Time`) == 6)
+
+CH_scooter_0819 <- CH_scooter_clean_ori %>%
+  filter(month(`Start Time`) == 8)
+
+CH_scooter_07to09 <- CH_scooter_clean_ori %>%
+  filter(month(`Start Time`) > 6 & month(`Start Time`) < 10)
+
+# Read city boundary shapefile 
+CH_ct_file <- file.path(CH_directory,
+                         "Boundaries - Census Tracts - 2010/geo_export_afd3fb8b-c948-4bba-b83c-b2a0ac543749.shp")
+
+CH_ct <- st_read(CH_ct_file) %>%
+  st_transform(CH_proj)
+```
+
+### 8.4 Read Census data for all cities and join scooter data to tracts
+
+#### Louisville
+
+```{r, echo = TRUE, eval = FALSE}
+# Read and input census key
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
+
+# Collect census data and geometries
+LV_Census_raw <- get_acs(geography = "tract", 
+                     variables = census_vars, 
+                     year = 2018, 
+                     state = "KY", 
+                     geometry = TRUE, 
+                     county = c("Jefferson"),
+                     output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(LV_proj)
+
+LV_Census_geoinfo <- LV_Census_raw %>%
+  dplyr::select(GEOID, geometry) %>%
+  st_join(LV_SA) %>% na.omit() %>% dplyr::select(GEOID,geometry)
+
+# extract centroid of each census tract
+LV_Census_geoinfo <- LV_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(LV_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(LV_Census_geoinfo))[, 2])
+
+LV_Census <- LV_Census_raw %>% 
+  st_transform(LV_proj) %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(LV_Census)
+
+LV_Census <- LV_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+LV_tract_list <- LV_Census_geoinfo$GEOID
+
+LV_Census_ct <- LV_Census %>%
+  filter(LV_Census$GEOID %in% LV_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+LV_Census_ct <- merge(LV_Census_geoinfo, LV_Census_ct, by = 'GEOID')
+
+### Open Data ----
+# Count origins for each census tract
+
+LV_open_origins_RDS <- file.path(data_directory,
+                                 "~RData/Louisville/LV_open_origins")
+
+# LV_open_origins <- readRDS(LV_open_origins_RDS)
+
+
+LV_open_07to09_sf <- LV_open_origins %>%
+  filter(month(StartDate) >= '2019-07-01' & StartDate < '2019-10-01')
+
+LV_open_origins_ct <- LV_Census_ct %>% 
+  mutate(origins_cnt = (lengths(st_intersects(., LV_open_07to09_sf))))
+
+# Count dests for each census tract
+LV_open_dests_ct <- LV_Census_ct %>%
+ mutate(dests_cnt = lengths(st_intersects(., LV_open_dests)))
+
+# Combine
+LV_open_ct <- LV_open_origins_ct %>%
+  left_join(LV_open_dests_ct %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, dests_cnt),
+            by = "GEOID")
+
+LV_open_ct <- LV_open_origins_ct
+
+
+LV_ORIGINS <- LV_scooter_ct %>%
+  group_by(Start.Census.Tract) %>% 
+  summarise(Outflow = n()) %>%
+  na.omit()
+
+LV_DESTS <- LV_scooter_ct %>%
+  group_by(End.Census.Tract) %>% 
+  summarise(Inflow = n()) %>%
+  na.omit()
+
+LV_net_inoutflow <- LV_open_ct %>% 
+  dplyr::select(GEOID, origins_cnt, dests_cnt) %>%
+  rename(Inflow = dests_cnt, Outflow = origins_cnt) %>%
+  mutate(NetInflow = Inflow - Outflow,
+         NetInflowRate = (Inflow - Outflow)/Inflow)
+LV_net_inoutflow[is.na(LV_net_inoutflow)] <- 0
+most_pickups <- LV_net_inoutflow$GEOID[LV_net_inoutflow$Outflow==max(LV_net_inoutflow$Outflow)]
+most_dropoffs <- LV_net_inoutflow$GEOID[LV_net_inoutflow$Inflow==max(LV_net_inoutflow$Inflow)]
+
+
+most_pickups_ct <- subset(LV_net_inoutflow,LV_net_inoutflow$GEOID==most_pickups)
+most_dropoffs_ct <- subset(LV_net_inoutflow,LV_net_inoutflow$GEOID==most_dropoffs)
+max_inflow <- max(abs(LV_net_inoutflow$NetInflow))
+max_inflowRate <- max(abs(LV_net_inoutflow$NetInflowRate))
+
+### users events####
+# Read the structured rebalance data - users events
+LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
+                                                      "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs")
+
+# LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
+# extract x y of geometry
+LV_rebal_user_only_0619_combined_rowPairs[c("lon_s", "lat_s")] <- do.call(rbind, 
+                                                                     lapply(strsplit(as.character(LV_rebal_user_only_0619_combined_rowPairs$trip_origin), "[()]"), 
+                                                                            function(col) {   
+                                                                              (parts <- unlist(strsplit(col[2], ",")))
+                                                                            }
+                                                                     )
+)
+
+LV_rebal_user_only_0619_combined_rowPairs[c("lon_d", "lat_d")] <- do.call(rbind, 
+                                                                     lapply(strsplit(as.character(LV_rebal_user_only_0619_combined_rowPairs$trip_dest), "[()]"), 
+                                                                            function(col) {   
+                                                                              (parts <- unlist(strsplit(col[2], ",")))
+                                                                            }
+                                                                     )
+)
+
+LV_rebal_user_only_0619_combined_rowPairs$lon_s <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lon_s)
+LV_rebal_user_only_0619_combined_rowPairs$lat_s <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lat_s)
+LV_rebal_user_only_0619_combined_rowPairs$lon_d <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lon_d)
+LV_rebal_user_only_0619_combined_rowPairs$lat_d <- as.numeric(LV_rebal_user_only_0619_combined_rowPairs$lat_d)
+
+LV_rebal_user_only_0619_combined_rowPairs_sf <- st_as_sf(LV_rebal_user_only_0619_combined_rowPairs, sf_column_name = "trip_origin", crs=LV_proj)
+LV_rebal_user_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_user_only_0619_combined_rowPairs_sf, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(Start.Census.Tract=GEOID)
+
+LV_rebal_user_only_0619_combined_rowPairs_ct <- st_as_sf(as.data.frame(LV_rebal_user_only_0619_combined_rowPairs_ct), sf_column_name = "trip_dest",crs=LV_proj)
+LV_rebal_user_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_user_only_0619_combined_rowPairs_ct, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(End.Census.Tract=GEOID)
+
+
+### rebalance events####
+# Read the structured rebalance data - rebalance events
+LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory,
+                                                     "~RData/Louisville/LV_rebal_reb_only_0619_combined_rowPairs")
+
+# LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+
+
+# extract x y of geometry
+LV_rebal_reb_only_0619_combined_rowPairs[c("lon_s", "lat_s")] <- do.call(rbind, 
+                                                                    lapply(strsplit(as.character(LV_rebal_reb_only_0619_combined_rowPairs$trip_origin), "[()]"), 
+                                                                           function(col) {   
+                                                                             (parts <- unlist(strsplit(col[2], ",")))
+                                                                           }
+                                                                    )
+)
+
+LV_rebal_reb_only_0619_combined_rowPairs[c("lon_d", "lat_d")] <- do.call(rbind, 
+                                                                    lapply(strsplit(as.character(LV_rebal_reb_only_0619_combined_rowPairs$trip_dest), "[()]"), 
+                                                                           function(col) {   
+                                                                             (parts <- unlist(strsplit(col[2], ",")))
+                                                                           }
+                                                                    )
+)
+
+LV_rebal_reb_only_0619_combined_rowPairs$lon_s <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lon_s)
+LV_rebal_reb_only_0619_combined_rowPairs$lat_s <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lat_s)
+LV_rebal_reb_only_0619_combined_rowPairs$lon_d <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lon_d)
+LV_rebal_reb_only_0619_combined_rowPairs$lat_d <- as.numeric(LV_rebal_reb_only_0619_combined_rowPairs$lat_d)
+
+LV_rebal_reb_only_0619_combined_rowPairs_sf <- st_as_sf(LV_rebal_reb_only_0619_combined_rowPairs, sf_column_name = "trip_origin",crs=LV_proj)
+LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_reb_only_0619_combined_rowPairs_sf, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(Start.Census.Tract=GEOID)
+
+LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_as_sf(as.data.frame(LV_rebal_reb_only_0619_combined_rowPairs_ct), sf_column_name = "trip_dest",crs=LV_proj)
+LV_rebal_reb_only_0619_combined_rowPairs_ct <- st_join(LV_rebal_reb_only_0619_combined_rowPairs_ct, LV_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(End.Census.Tract=GEOID)
+
+
+
+# save the data ####
+LV_rebal_reb_only_0619_combined_rowPairs_ct_RDS <- file.path(data_directory, 
+                                          "~RData/Louisville/LV_rebal_reb_only_0619_combined_rowPairs_ct")
+
+# saveRDS(LV_rebal_reb_only_0619_combined_rowPairs_ct,
+#         file = LV_rebal_reb_only_0619_combined_rowPairs_ct_RDS)
+
+LV_rebal_user_only_0619_combined_rowPairs_ct_RDS <- file.path(data_directory, 
+                                                        "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs_ct")
+
+# saveRDS(LV_rebal_user_only_0619_combined_rowPairs_ct,
+#         file = LV_rebal_user_only_0619_combined_rowPairs_ct_RDS)
+```
+
+#### DC
+
+```{r, echo = TRUE, eval = FALSE}
+# Collect census data and geometries
+DC_Census_raw <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "DC", 
+                         geometry = TRUE, 
+                         # county=c("Travis"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(DC_proj)
+
+DC_Census_geoinfo <- DC_Census_raw %>%
+  dplyr::select(GEOID, geometry)
+
+# extract centroid of each census tract
+DC_Census_geoinfo <- DC_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(DC_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(DC_Census_geoinfo))[, 2])
+
+DC_Census <- DC_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(DC_Census)
+
+DC_Census <- DC_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+DC_tract_list <- DC_Census_geoinfo$GEOID
+
+DC_Census_ct <- DC_Census %>%
+  filter(DC_Census$GEOID %in% DC_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+DC_Census_ct <- merge(DC_Census_geoinfo, DC_Census_ct, by = 'GEOID')
+
+### Open Data ----
+# Count origins for eaDC census tract
+DC_open_origins_ct <- DC_Census_ct %>% 
+  mutate(origins_cnt = (lengths(st_intersects(., DC_scooter_07to09_sf)))/3)
+
+# Count dests for eaDC census tract ##not working for DC yet since not all trip dest can't be joined to street (some are trails)
+#DC_open_dests_ct <- DC_Census_ct %>% 
+#  mutate(dests_cnt = lengths(st_intersects(., DC_open_dests)))
+
+DC_open_ct <- DC_open_origins_ct
+
+# Combine
+# DC_open_ct <- DC_open_origins_ct %>% 
+#   left_join(DC_open_dests_ct %>% 
+#               st_drop_geometry() %>%
+#               dplyr::select(GEOID, dests_cnt),
+#             by = "GEOID")
+
+DC_scooter_RDS <- file.path(data_directory, 
+                            "~RData/DC/DC_model")
+# DC_scooter <- readRDS(DC_scooter_RDS)
+
+### users events####
+# Read the structured rebalance data - users events
+DC_scooter_sf <- st_as_sf(DC_scooter_data %>% dplyr::select(-start_date, -end_date), coords = c('start_lon','start_lat'),crs=4326) %>%
+  st_transform(DC_proj) %>%
+  mutate(start_longitude = unlist(map(geometry, 1)),
+         start_latitude = unlist(map(geometry, 2)))
+DC_scooter_ct <- st_join(DC_scooter_sf %>% st_transform(2246), DC_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(Start.Census.Tract=GEOID)
+
+DC_scooter_ct <- st_as_sf(as.data.frame(DC_scooter_ct) %>% dplyr::select(-geometry) %>% na.omit(), coords = c('end_lon','end_lat'),crs=4326) %>%
+  st_transform(DC_proj) %>%
+  mutate(end_longitude = unlist(map(geometry, 1)),
+         end_longitude = unlist(map(geometry, 2)))
+
+
+DC_scooter_ct <- st_join(DC_scooter_ct %>% st_transform(2246), DC_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(End.Census.Tract=GEOID)
+
+DC_scooter_ct_RDS <- file.path(data_directory, 
+                               "~RData/DC/DC_scooter_ct")
+# DC_scooter_ct <- readRDS(DC_scooter_ct_RDS)
+```
+
+#### Austin
+
+```{r, echo = TRUE, eval = FALSE}
+# Read and input census key
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
+
+# Collect census data and geometries
+AU_Census_raw <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "TX", 
+                         geometry = TRUE, 
+                         county=c("Travis"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(AU_proj)
+
+AU_Census_geoinfo <- AU_Census_raw %>%
+  dplyr::select(GEOID, geometry)
+  # st_intersection(LV_SA %>% dplyr::select(geometry))
+
+# extract centroid of each census tract
+AU_Census_geoinfo <- AU_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(AU_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(AU_Census_geoinfo))[, 2])
+
+AU_Census <- AU_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(AU_Census)
+
+AU_Census <- AU_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+AU_tract_list <- AU_Census_geoinfo$GEOID
+
+AU_Census_ct <- AU_Census %>%
+  filter(AU_Census$GEOID %in% AU_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+AU_Census_ct <- merge(AU_Census_geoinfo, AU_Census_ct, by = 'GEOID')
+
+AU_open_ct <- merge(AU_Census_ct, AU_open_origins_ct, by.x = 'GEOID', by.y = 'census_tract_start')
+
+### Open Data ----
+# Count origins for each census tract
+AU_cnt_origins <- AU_scooter %>%
+  filter(month %in% c(7,8,9),
+         year==2019)
+
+AU_scooter_RDS <- file.path(data_directory, 
+                               "~RData/Austin/AU_scooter")
+# AU_scooter <- readRDS(AU_scooter_RDS)
+AU_open_origins_ct <- AU_Census_ct %>% 
+  mutate(origins_cnt = lengths(st_intersects(., LV_open_origins)))
+
+# Count dests for each census tract
+LV_open_dests_ct <- LV_Census_ct %>% 
+  mutate(dests_cnt = lengths(st_intersects(., LV_open_dests)))
+
+# Combine
+LV_open_ct <- LV_open_origins_ct %>% 
+  left_join(LV_open_dests_ct %>% 
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, dests_cnt),
+            by = "GEOID")
+
+
+AU_ORIGINS <- AU_cnt_origins %>%
+  group_by(census_tract_start) %>% 
+  summarise(Outflow = n()) %>%
+  na.omit()
+
+AU_DESTS <- AU_cnt_origins %>%
+  group_by(census_tract_end) %>% 
+  summarise(Inflow = n()) %>%
+  na.omit()
+
+AU_net_inoutflow <- merge(AU_ORIGINS, AU_DESTS, all = T, by.x='census_tract_start', by.y='census_tract_end')
+AU_net_inoutflow[is.na(AU_net_inoutflow)] <- 0
+AU_net_inoutflow <- AU_net_inoutflow %>%
+  mutate(NetInflow = Inflow - Outflow) %>%
+  merge(AU_Census_geoinfo %>% dplyr::select(GEOID, geometry), by.x='census_tract_start', by.y='GEOID')
+most_pickups <- AU_net_inoutflow$census_tract_start[AU_net_inoutflow$Outflow==max(AU_net_inoutflow$Outflow)]
+most_dropoffs <- AU_net_inoutflow$census_tract_start[AU_net_inoutflow$Inflow==max(AU_net_inoutflow$Inflow)]
+
+AU_net_inoutflow <- AU_net_inoutflow %>%
+  mutate(NetInflowRate = (Inflow - Outflow)/Inflow)
+AU_net_inoutflow$NetInflowRate[is.infinite(AU_net_inoutflow$NetInflowRate)] <- 0
+
+most_pickups_ct <- subset(AU_net_inoutflow,AU_net_inoutflow$census_tract_start==most_pickups) %>%
+  merge(AU_Census_geoinfo %>% dplyr::select(GEOID, geometry), by.x='census_tract_start', by.y='GEOID')
+most_dropoffs_ct <- subset(AU_net_inoutflow,AU_net_inoutflow$census_tract_start==most_dropoffs) %>%
+  merge(AU_Census_geoinfo %>% dplyr::select(GEOID, geometry), by.x='census_tract_start', by.y='GEOID')
+max_inflow <- max(abs(AU_net_inoutflow$NetInflow))
+max_inflowRate <- max(abs(AU_net_inoutflow$NetInflowRate))
+```
+
+#### Minneapolis
+
+```{r, echo = TRUE, eval = FALSE}
+# Read and input census key
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
+
+# Collect census data and geometries
+MNP_Census_raw <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "MN", 
+                         geometry = TRUE, 
+                         county = c("Hennepin"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(MNP_proj)
+
+MNP_Census_geoinfo <- MNP_Census_raw %>%
+  dplyr::select(GEOID, geometry) %>%
+  st_intersection(MNP_ct %>% dplyr::select(geometry))
+
+# extract centroid of each census tract
+MNP_Census_geoinfo <- MNP_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(MNP_Census_geoinfo))[, 2])
+
+
+MNP_Census <- MNP_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+MNP_Census <- MNP_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+MNP_tract_list <- MNP_Census_geoinfo$GEOID
+
+MNP_Census_ct <- MNP_Census %>%
+  filter(MNP_Census$GEOID %in% MNP_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+MNP_Census_ct <- merge(MNP_Census_geoinfo, MNP_Census_ct, by = 'GEOID')
+
+### Open Data ----
+# Count origins for each census tract
+MNP_open_origins_ct <- MNP_Census_ct %>% 
+  mutate(origins_cnt = (lengths(st_intersects(., MNP_scooter_07to09_ori %>% st_transform(2246)))))
+
+# Count dests for each census tract ##not working for MNP yet since not all trip dest can't be joined to street (some are trails)
+# MNP_open_dests_ct <- MNP_Census_ct %>% 
+#  mutate(dests_cnt = lengths(st_intersects(., MNP_open_dests)))
+
+MNP_open_ct <- MNP_open_origins_ct
+
+# Combine
+# MNP_open_ct <- MNP_open_origins_ct %>% 
+#   left_join(MNP_open_dests_ct %>% 
+#               st_drop_geometry() %>%
+#               dplyr::select(GEOID, dests_cnt),
+#             by = "GEOID")
+
+MNP_net_inoutflow <- rename(MNP_open_origins_ct, Outflow=origins_cnt)
+```
+
+#### Kansas City
+
+```{r, echo = TRUE, eval = FALSE}
+# Read and input census key
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
+
+# Collect census data and geometries
+KC_Census_raw <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "MO", 
+                         geometry = TRUE, 
+                         county=c("Jackson","Platte", "Clay"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(KC_proj)
+# 
+# KC_Census_raw2 <- get_acs(geography = "tract", 
+#                          variables = census_vars, 
+#                          year = 2018, 
+#                          state = "KS", 
+#                          geometry = TRUE, 
+#                          county=c("Johnson"),
+#                          output = "wide") %>%
+#   rename_census_cols %>%
+#   dplyr::select(GEOID, 
+#                 geometry,
+#                 census_colNames) %>% 
+#   st_transform(KC_proj)
+# 
+# KC_Census_raw <- rbind(KC_Census_raw1, KC_Census_raw2)
+
+KC_Census_geoinfo <- KC_Census_raw %>%
+  dplyr::select(GEOID, geometry)
+# st_intersection(LV_SA %>% dplyr::select(geometry))
+
+# extract centroid of each census tract
+KC_Census_geoinfo <- KC_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(KC_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(KC_Census_geoinfo))[, 2])
+
+KC_Census <- KC_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(KC_Census)
+
+KC_Census <- KC_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+KC_tract_list <- KC_Census_geoinfo$GEOID
+
+KC_Census_ct <- KC_Census %>%
+  filter(KC_Census$GEOID %in% KC_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor
+KC_Census_ct <- merge(KC_Census_geoinfo, KC_Census_ct, by = 'GEOID')
+
+### Open Data ----
+# Count origins for each census tract
+KC_scooter_ct_origins <- KC_scooter_ct %>%
+  mutate(month = month(KC_scooter_ct$start_time),
+         year = year(KC_scooter_ct$start_time))
+
+KC_cnt_origins <- KC_scooter_ct_origins %>%
+  subset((month %in% c(7,8,9)) & (year==2019)) %>%
+  st_intersection(KC_Census_geoinfo)
+  
+KC_open_origins_ct <- KC_cnt_origins %>% 
+  group_by(Start.Census.Tract) %>%
+  summarise(origins_cnt = n())
+
+# Count dests for each census tract
+KC_open_dests_ct <- KC_cnt_origins %>% 
+  group_by(End.Census.Tract) %>%
+  summarise(dests_cnt = n())
+
+# Combine
+KC_open_ct <- KC_open_origins_ct %>% 
+  left_join(KC_open_dests_ct %>% 
+              st_drop_geometry() %>%
+              dplyr::select(End.Census.Tract, dests_cnt),
+            by = c("Start.Census.Tract"="End.Census.Tract"))
+
+### users events####
+# Read the structured rebalance data - users events
+KC_scooter_sf <- st_as_sf(KC_scooter %>% na.omit(), coords = c('start_longitude','start_latitude'),crs=4326) %>%
+  mutate(start_longitude = unlist(map(geometry, 1)),
+         start_latitude = unlist(map(geometry, 2))) %>%
+  st_transform(KC_proj)
+KC_scooter_ct <- st_join(KC_scooter_sf, KC_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(Start.Census.Tract=GEOID)
+
+KC_scooter_ct <- st_as_sf(as.data.frame(KC_scooter_ct) %>% dplyr::select(-geometry), coords = c('end_longitude','end_latitude'),crs=4326) %>%
+  st_transform(KC_proj) %>%
+  mutate(end_longitude = unlist(map(geometry, 1)),
+         end_latitude = unlist(map(geometry, 2))) 
+
+
+KC_scooter_ct <- st_join(KC_scooter_ct, KC_Census_geoinfo %>% dplyr::select(GEOID), st_within, left=T) %>%
+  rename(End.Census.Tract=GEOID)
+
+KC_scooter_ct_RDS <- file.path(data_directory, 
+                               "~RData/Kansas City/KC_scooter_ct")
+# KC_scooter_ct <- readRDS(KC_scooter_ct_RDS)
+# saveRDS(KC_scooter_ct,
+#         file = KC_scooter_ct_RDS)
+
+KC_scooter_07to09 <- KC_scooter_ct %>%
+  filter(year(start_time) == 2019, month(start_time) > 6 & month(start_time) < 10)
+
+
+# plot net inflow/outflow
+
+KC_ORIGINS <- KC_scooter_07to09 %>%
+                    group_by(Start.Census.Tract) %>% 
+                    summarise(Outflow = n()) %>%
+  na.omit()
+
+KC_DESTS <- KC_scooter_07to09 %>%
+  group_by(End.Census.Tract) %>% 
+  summarise(Inflow = n()) %>%
+  na.omit()
+
+KC_net_inoutflow <- merge(KC_ORIGINS %>% st_set_geometry(NULL), KC_DESTS %>% st_set_geometry(NULL), all = T, by.x='Start.Census.Tract', by.y='End.Census.Tract')
+KC_net_inoutflow[is.na(KC_net_inoutflow)] <- 0
+KC_net_inoutflow <- KC_net_inoutflow %>%
+  mutate(NetInflow = Inflow - Outflow) %>%
+  merge(KC_Census_geoinfo %>% dplyr::select(GEOID, geometry), by.x='Start.Census.Tract', by.y='GEOID')
+most_pickups <- KC_net_inoutflow$Start.Census.Tract[KC_net_inoutflow$Outflow==max(KC_net_inoutflow$Outflow)]
+most_dropoffs <- KC_net_inoutflow$Start.Census.Tract[KC_net_inoutflow$Inflow==max(KC_net_inoutflow$Inflow)]
+
+KC_net_inoutflow <- KC_net_inoutflow %>%
+  mutate(NetInflowRate = (Inflow - Outflow)/Inflow)
+  
+most_pickups_ct <- subset(KC_net_inoutflow,KC_net_inoutflow$Start.Census.Tract==most_pickups)
+most_dropoffs_ct <- subset(KC_net_inoutflow,KC_net_inoutflow$Start.Census.Tract==most_dropoffs)
+max_inflow <- max(abs(KC_net_inoutflow$NetInflow))
+max_inflowRate <- max(abs(KC_net_inoutflow$NetInflowRate))
+```
+
+#### Chicago
+
+```{r, echo = TRUE, eval = FALSE}
+# Read and input census key
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
+
+# Collect census data and geometries
+CH_Census_raw <- get_acs(geography = "tract", 
+                          variables = census_vars, 
+                          year = 2018, 
+                          state = "IL", 
+                          geometry = TRUE, 
+                          county = c("Cook"),
+                          output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(CH_proj)
+
+CH_tract_list <- CH_ct$geoid10
+
+CH_Census_geoinfo <- CH_Census_raw %>%
+  dplyr::select(GEOID, geometry)
+
+# extract centroid of each census tract
+CH_ct <- CH_ct %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(CH_ct))[, 1],
+         centroid_Y = st_coordinates(st_centroid(CH_ct))[, 2])
+
+
+CH_Census <- CH_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+CH_Census <- CH_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+CH_Census_ct <- CH_Census %>%
+  filter(CH_Census$GEOID %in% CH_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_LV
+CH_Census_ct <- merge(CH_ct, CH_Census_ct, by.x = 'geoid10', by.y = 'GEOID')
+
+CH_Census_ct <- CH_Census_ct %>%
+  dplyr::select(-c(commarea, commarea_n, countyfp10, name10, namelsad10, notes, statefp10))
+```
+
+### 8.5 LODES job data for all cities
+
+#### Louisville
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in WAC Data
+LV_WAC_file <- file.path(data_directory,
+                         "LODES/ky_wac_S000_JT00_2017.csv.gz")
+
+LV_WAC <- read_csv(LV_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% LV_Census_geoinfo$GEOID) # from LV - 20 - Collect Census Data
+
+# Read in RAC Data
+LV_RAC_file <- file.path(data_directory,
+                         "LODES/ky_rac_S000_JT00_2017.csv.gz")
+
+LV_RAC <- read_csv(LV_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% LV_Census_geoinfo$GEOID) # from LV - 20 - Collect Census Data
+
+# Join them
+LV_LODES <- left_join(LV_WAC, LV_RAC, by = c("geocode"))
+
+LV_LODES_RDS <- file.path(data_directory, 
+                          "~RData/Louisville/LV_LODES")
+```
+
+#### DC
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in WAC Data
+DC_WAC_file <- file.path(data_directory,
+                         "LODES/dc_wac_S000_JT00_2017.csv.gz")
+
+DC_WAC <- read_csv(DC_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% DC_tract_list) 
+
+# Read in RAC Data
+DC_RAC_file <- file.path(data_directory,
+                         "LODES/dc_rac_S000_JT00_2017.csv.gz")
+
+DC_RAC <- read_csv(DC_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% DC_tract_list) 
+
+# Join them
+DC_LODES <- left_join(DC_WAC, DC_RAC, by = c("geocode"))
+
+DC_LODES_RDS <- file.path(data_directory, 
+                          "~RData/DC/DC_LODES")
+```
+
+#### Austin
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in WAC Data
+AU_WAC_file <- file.path(data_directory,
+                         "LODES/tx_wac_S000_JT00_2017.csv.gz")
+
+AU_WAC <- read_csv(AU_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% AU_tract_list) 
+
+# Read in RAC Data
+AU_RAC_file <- file.path(data_directory,
+                         "LODES/tx_rac_S000_JT00_2017.csv.gz")
+
+AU_RAC <- read_csv(AU_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% AU_tract_list) 
+
+# Join them
+AU_LODES <- left_join(AU_WAC, AU_RAC, by = c("geocode"))
+
+AU_LODES_RDS <- file.path(data_directory, 
+                               "~RData/Austin/AU_LODES")
+
+```
+
+#### Minneapolis
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in WAC Data
+MNP_WAC_file <- file.path(data_directory,
+                         "LODES/mn_wac_S000_JT00_2017.csv.gz")
+
+MNP_WAC <- read_csv(MNP_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% MNP_tract_list) 
+
+# Read in RAC Data
+MNP_RAC_file <- file.path(data_directory,
+                         "LODES/mn_rac_S000_JT00_2017.csv.gz")
+
+MNP_RAC <- read_csv(MNP_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% MNP_tract_list) 
+
+# Join them
+MNP_LODES <- left_join(MNP_WAC, MNP_RAC, by = c("geocode"))
+
+MNP_LODES_RDS <- file.path(data_directory, 
+                          "~RData/Minneapolis/MNP_LODES")
+```
+
+#### Kansas City
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in WAC Data
+KC_WAC_file <- file.path(data_directory,
+                         "LODES/mo_wac_S000_JT00_2017.csv.gz")
+
+KC_WAC <- read_csv(KC_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% KC_tract_list) 
+
+# Read in RAC Data
+KC_RAC_file <- file.path(data_directory,
+                         "LODES/mo_rac_S000_JT00_2017.csv.gz")
+
+KC_RAC <- read_csv(KC_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% KC_tract_list) 
+
+# Join them
+KC_LODES <- left_join(KC_WAC, KC_RAC, by = c("geocode"))
+
+KC_LODES_RDS <- file.path(data_directory, 
+                          "~RData/Kansas City/KC_LODES")
+
+```
+
+#### Chicago
+
+```{r, echo = TRUE, eval = FALSE}
+# Read in WAC Data
+CH_WAC_file <- file.path(data_directory,
+                         "LODES/il_wac_S000_JT00_2017.csv.gz")
+
+CH_WAC <- read_csv(CH_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% CH_tract_list) 
+
+# Read in RAC Data
+CH_RAC_file <- file.path(data_directory,
+                         "LODES/il_rac_S000_JT00_2017.csv.gz")
+
+CH_RAC <- read_csv(CH_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% CH_tract_list) 
+
+# Join them
+CH_LODES <- left_join(CH_WAC, CH_RAC, by = c("geocode"))
+
+CH_LODES_RDS <- file.path(data_directory, 
+                          "~RData/Chicago/CH_LODES")
+```
+
+### 8.6 OpenStreetMap features for all cities
+
+#### Louisville
+
+```{r, echo = TRUE, eval = FALSE}
+### using osm to grab data####
+ LV_college2 <- opq ("Louisville USA") %>%
+   add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+   osmdata_sf(.)
+# 
+LV_college2 <- st_geometry(LV_college2$osm_points) %>%
+   st_transform(LV_proj) %>%
+   st_sf() %>%
+   st_intersection(LV_SA) %>%
+   mutate(Legend = 'College',
+          City = 'Louisville') %>%
+   dplyr::select(Legend, City, geometry)
+
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = LV_college2, color = "red", size = 1.5)+
+  geom_sf(data = LV_SA, fill='transparent')+
+  labs(title = "Location of offices, retails, and colleges in Louisville",
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
+
+Get_OSM <- function ()
+
+# restaurant ####
+LV_restaurant <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
+  osmdata_sf(.)
+
+LV_restaurant <- st_geometry(LV_restaurant$osm_points) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Restaurant',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+# public transport ####
+LV_public_transport <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'public_transport', value = c("stop_position", "station")) %>%
+  osmdata_sf(.)
+
+LV_public_transport <- st_geometry(LV_public_transport$osm_points) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Public.Transport',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+# retail ####
+LV_retail <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'shop') %>%
+  osmdata_sf(.)
+
+LV_retail <- st_geometry(LV_retail$osm_points) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Retails',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+# office ####
+LV_office <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'office') %>%
+  osmdata_sf(.)
+
+LV_office <- st_geometry(LV_office$osm_points) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Office',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+# cycleway ####
+LV_cycleway <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'cycleway') %>%
+  osmdata_sf(.)
+
+LV_cycleway <- st_geometry(LV_cycleway$osm_lines) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Cycleway',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+LV_cycleway %>% st_join(LV_Census_geoinfo %>% st_intersection(LV_SA))
+
+# leisure  ####
+LV_leisure <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'leisure') %>%
+  osmdata_sf(.)
+
+LV_leisure <- st_geometry(LV_leisure$osm_points) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Leisure',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+# tourism  ####
+LV_tourism <- opq ("Louisville USA") %>%
+  add_osm_feature(key = 'tourism', value = c("aquarium", "artwork", "attraction", "gallery", "museumm", "theme_park", 'viewpoint', 'zoo')) %>%
+  osmdata_sf(.)
+
+LV_tourism <- st_geometry(LV_tourism$osm_points) %>%
+  st_transform(LV_proj) %>%
+  st_sf() %>%
+  st_intersection(LV_SA) %>%
+  mutate(Legend = 'Tourism',
+         City = 'Louisville') %>%
+  dplyr::select(Legend, City, geometry)
+
+# street  ####
+LV_street <- st_read('https://opendata.arcgis.com/datasets/f36b2c8164714b258840dce66909ba9a_1.geojson') %>%
+  st_transform(LV_proj)
+
+LV_street <- LV_street %>% st_join(LV_Census_geoinfo %>% st_intersection(LV_SA))
+
+## code to plot and check the OSM data
+grid.arrange(
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+  geom_sf(data = LV_leisure, color = "lightsalmon",alpha = 0.6)+
+  geom_sf(data = LV_street, color = "lightblue",alpha = 0.6)+
+  geom_sf(data = LV_SA,fill='transparent')+
+  labs(title = "Location of cycleway and leisure places in Louisville",
+       subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+  mapTheme(),
+
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_restaurant, color = "turquoise",alpha = 0.6)+
+  geom_sf(data = LV_tourism, color = "hotpink", alpha = 0.6)+
+  geom_sf(data = LV_SA,fill='transparent')+
+  labs(title = "Location of restaurant and tourism spots in Louisville",
+       subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+  mapTheme(),
+
+ggplot()+
+  geom_sf(data = LV_Census_ct, fill = "white")+
+  geom_sf(data = LV_office, color = "indianred2", alpha = 0.6, size = 2)+
+  geom_sf(data = LV_retail, color = "orange", alpha = 0.6, size = 2)+
+  geom_sf(data = LV_college%>%st_intersection(LV_SA), shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = LV_SA,fill='transparent')+
+  labs(title = "Location of offices, retails, and colleges in Louisville",
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme(),
+ncol = 3)
+
+## create a panal to store spatial effects ####
+LV_Census_panel <- LV_Census_geoinfo %>% st_intersection(LV_SA %>% dplyr::select(geometry))
+
+#### KNN ####
+# nn function ####
+nn_function <- function(measureFrom,measureTo,k) {
+  measureFrom_Matrix <-
+    as.matrix(measureFrom)
+  measureTo_Matrix <-
+    as.matrix(measureTo)
+  nn <-   
+    get.knnx(measureTo, measureFrom, k)$nn.dist
+  output <-
+    as.data.frame(nn) %>%
+    rownames_to_column(var = "thisPoint") %>%
+    gather(points, point_distance, V1:ncol(.)) %>%
+    arrange(as.numeric(thisPoint)) %>%
+    group_by(thisPoint) %>%
+    summarize(pointDistance = mean(point_distance)) %>%
+    arrange(as.numeric(thisPoint)) %>% 
+    dplyr::select(-thisPoint) %>%
+    pull()
+  
+  return(output)  
+}
+# knn for each spatial effects ####
+LV_Census_panel$KNN_college <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                              coordinates(LV_college %>% st_coordinates()),
+                                              1)
+ggplot() +
+  geom_sf(data=LV_Census_panel ,aes(fill=KNN_college))+
+  scale_fill_viridis(direction = -1)
+
+LV_Census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                              coordinates(LV_restaurant %>% st_coordinates()),
+                                              5)
+ggplot() +
+  geom_sf(data=LV_Census_panel ,aes(fill=KNN_restaurant))+
+  scale_fill_viridis(direction = -1)
+
+LV_Census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                                    coordinates(LV_public_transport %>% st_coordinates()),
+                                                    5)
+ggplot() +
+  geom_sf(data=LV_Census_panel ,aes(fill=KNN_public_transport))+
+  scale_fill_viridis(direction = -1)
+
+LV_Census_panel$KNN_office <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                          coordinates(LV_office %>% st_coordinates()),
+                                          5)
+
+LV_Census_panel$KNN_retail <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                          coordinates(LV_retail %>% st_coordinates()),
+                                          5)
+
+
+LV_Census_panel$KNN_tourism <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                           coordinates(LV_tourism %>% st_coordinates()),
+                                           5)
+
+LV_Census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(LV_Census_panel)[,2:3]),
+                                           coordinates(LV_leisure %>% st_coordinates()),
+                                           5)
+
+LV_Census_geoinfo$area <- as.numeric(st_area(LV_Census_geoinfo))*9.29e-8
+# retail ####
+LV_retail_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA), LV_retail) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_retail= n())
+
+LV_retail_ct$density_retail <- LV_retail_ct$count_retail/LV_retail_ct$area
+
+ggplot() +
+  geom_sf(data=LV_retail_ct,aes(fill=density_retail))+
+  scale_fill_viridis()
+
+# office ####
+LV_office_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA), LV_office) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_office= n())
+
+LV_office_ct$density_office <- LV_office_ct$count_office/LV_office_ct$area
+
+ggplot() +
+  geom_sf(data=LV_office_ct,aes(fill=density_office))+
+  scale_fill_viridis()
+
+# restaurant ####
+LV_restaurant_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA),LV_restaurant) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_restaurant= n())
+LV_restaurant_ct$density_restaurant <- LV_restaurant_ct$count_restaurant/LV_restaurant_ct$area
+
+ggplot() +
+  geom_sf(data=LV_restaurant_ct,aes(fill=density_restaurant))+
+  scale_fill_viridis()
+
+# public transport ####
+LV_public_transport_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA),LV_public_transport) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_pubtran= n())
+
+LV_public_transport_ct$density_pubtran <- LV_public_transport_ct$count_pubtran/LV_public_transport_ct$area
+#LV_Census_panel$density_pubtran <- LV_public_transport_ct$density_pubtran
+
+ggplot() +
+  geom_sf(data=LV_public_transport_ct,aes(fill=density_pubtran))+
+  scale_fill_viridis()
+
+# cycleway ####
+LV_cycleway_ct_len <- st_intersection(LV_cycleway,LV_Census_geoinfo) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(LV_Census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+LV_cycleway_ct_len$total_length <- replace_na(LV_cycleway_ct_len$total_length,0) %>% st_intersection(LV_SA)
+
+ggplot() +
+  geom_sf(data=LV_cycleway_ct_len %>% st_intersection(LV_SA),aes(fill=total_length))+
+  scale_fill_viridis()
+
+# leisure ####
+LV_leisure_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA), LV_leisure) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_leisure= n())
+
+LV_leisure_ct$density_leisure <- LV_leisure_ct$count_leisure/LV_leisure_ct$area
+
+ggplot() +
+  geom_sf(data=LV_leisure_ct,aes(fill=density_leisure))+
+  scale_fill_viridis()
+
+# tourism ####
+LV_tourism_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA), LV_tourism) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_tourism= n())
+
+LV_tourism_ct$density_tourism <- LV_tourism_ct$count_tourism/LV_tourism_ct$area
+
+# college ####
+LV_college_ct <- st_join(LV_Census_geoinfo %>% st_intersection(LV_SA), LV_college) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_college= n())
+
+LV_college_ct$density_college <- LV_college_ct$count_college/LV_college_ct$area
+
+ggplot() +
+  geom_sf(data=LV_college_ct,aes(fill=density_college))+
+  scale_fill_viridis()
+
+# street ####
+LV_street_ct_len <- st_intersection(LV_street,LV_Census_geoinfo) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(LV_Census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+LV_street_ct_len$total_length <- replace_na(LV_street_ct_len$total_length,0)
+
+ggplot() +
+  geom_sf(data=LV_street_ct_len %>% st_intersection(LV_SA),aes(fill=total_length))+
+  scale_fill_viridis()
+
+# create panel
+LV_spatial_panel <- left_join(LV_Census_panel, LV_retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
+  left_join(LV_office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
+  left_join(LV_leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
+  left_join(LV_tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_tourism, density_tourism), by = 'GEOID') %>%
+  left_join(LV_public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_pubtran,density_pubtran), by = 'GEOID') %>%
+  left_join(LV_restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_restaurant, density_restaurant), by = 'GEOID') %>%
+  left_join(LV_college_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_college, density_college), by = 'GEOID') %>%
+  left_join(LV_cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, total_length), by = 'GEOID')
+
+LV_spatial_panel[is.na(LV_spatial_panel)] <- 0
+
+LV_spatial_panel_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_panel")
+#  saveRDS(LV_spatial_panel,
+#         file = LV_spatial_panel_RDS)
+# LV_spatial_panel <- readRDS(LV_spatial_panel_RDS)
+
+LV_spatial_census <- left_join(LV_spatial_panel, LV_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+LV_spatial_census <- LV_spatial_census %>%
+  dplyr::select(-KNN_university) %>%
+  mutate(city = 'Louisville')
+
+LV_spatial_census_RDS <- file.path(data_directory, "~RData/Louisville/LV_spatial_census")
+#  saveRDS(LV_spatial_census,
+#         file = LV_spatial_census_RDS)
+# LV_spatial_census <- readRDS(LV_spatial_census_RDS)
+
+LV_ori_spatial_correlation.long <-
+  st_set_geometry(LV_spatial_census, NULL) %>%
+  dplyr::select(origins_cnt, KNN_college, KNN_restaurant, KNN_public_transport, 
+                KNN_retail, KNN_office, KNN_tourism, KNN_leisure, count_retail, 
+                density_retail, count_office, density_office, count_leisure,
+                density_leisure, count_tourism, density_tourism,count_pubtran,
+                density_pubtran, count_restaurant, density_restaurant,
+                count_college, density_college, total_length) %>%
+  gather(Variable, Value, -origins_cnt )
+
+LV_ori_spatial_correlation.cor <-
+  LV_ori_spatial_correlation.long %>%
+  group_by(Variable) %>%
+  summarize(correlation = cor(Value, origins_cnt, use = "complete.obs"))
+
+ggplot(LV_ori_spatial_correlation.long, aes(Value, origins_cnt)) +
+  geom_point(size = 0.1) +
+  geom_text(data = LV_ori_spatial_correlation.cor, aes(label = paste("r =", round(correlation, 2))),
+            x=-Inf, y=Inf, vjust = 1, hjust = -.1) +
+  geom_smooth(method = "lm", se = FALSE, colour = "gold") +
+  facet_wrap(~Variable, ncol = 5, scales = "free") +
+  labs(title = "Origin count as a function of spatial factors")
+```
+
+#### DC
+
+```{r, echo = TRUE, eval = FALSE}
+#********************* the variables******************####
+city_name = "Washington DC"                              ####
+proj = DC_proj # city projection                         ####
+boundary = DC_Census_geoinfo # service area boundary              ####
+census_ct = DC_Census_ct # census tract ecosocia data ####
+origin_ct = DC_open_ct #census tract with count of trip origins
+census_geoinfo = DC_Census_geoinfo                    ####
+#*****************************************************####
+
+### using osm to grab data####
+college <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+  osmdata_sf(.)
+# 
+college <- st_geometry(college$osm_polygons) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  st_centroid() %>%
+  mutate(Legend = 'College',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+#Get_OSM <- function ()
+
+# restaurant ####
+restaurant <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
+  osmdata_sf(.)
+
+restaurant <- st_geometry(restaurant$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Restaurant',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# public transport ####
+public_transport <- opq (city_name) %>%
+  add_osm_feature(key = 'public_transport', value = c("stop_position", "station")) %>%
+  osmdata_sf(.)
+
+public_transport <- st_geometry(public_transport$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Public.Transport',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# retail ####
+retail <- opq (city_name) %>%
+  add_osm_feature(key = 'shop') %>%
+  osmdata_sf(.)
+
+retail <- st_geometry(retail$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Retails',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# office ####
+office <- opq (city_name) %>%
+  add_osm_feature(key = 'office') %>%
+  osmdata_sf(.)
+
+office <- st_geometry(office$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Office',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# cycleway ####
+cycleway <- opq (city_name) %>%
+  add_osm_feature(key = 'cycleway') %>%
+  osmdata_sf(.)
+
+cycleway <- st_geometry(cycleway$osm_lines) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Cycleway',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+cycleway %>% st_join(census_geoinfo %>% st_intersection(boundary))
+
+# leisure  ####
+leisure <- opq (city_name) %>%
+  add_osm_feature(key = 'leisure', value = c('adult_gaming_center','amusement_arcade','common','fitness_center','hackerspace','park',
+                                             'pitch','stadium')) %>%
+  osmdata_sf(.)
+
+leisure <- st_geometry(leisure$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Leisure',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# tourism  ####
+tourism <- opq (city_name) %>%
+  add_osm_feature(key = 'tourism', value = c("aquarium", "artwork", "attraction", "gallery", "museumm", "theme_park", 'viewpoint', 'zoo')) %>%
+  osmdata_sf(.)
+
+tourism <- st_geometry(tourism$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Tourism',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+## code to plot and check the OSM data
+geomggplot()+
+  geom_sf(data = census_ct, fill = "white")+
+  #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = college, color = "red", size = 1.5)+
+  geom_sf(data = boundary, fill='transparent')+
+  labs(title = paste("Location of offices, retails, and colleges in",city_name),
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
+
+grid.arrange(
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = leisure, color = "lightsalmon",alpha = 0.6)+
+    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of cycleway and leisure places in", city_name),
+         subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = restaurant, color = "turquoise",alpha = 0.6)+
+    geom_sf(data = tourism, color = "hotpink", alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of restaurant and tourism spots in", city_name),
+         subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = office, color = "indianred2", alpha = 0.6, size = 2)+
+    geom_sf(data = retail, color = "orange", alpha = 0.6, size = 2)+
+    geom_sf(data = college, shape = 23, fill = "cornflowerblue", size = 2)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of offices, retails, and colleges in", city_name),
+         subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+    mapTheme(),
+  ncol = 3)
+
+
+##########################################################################
+# This script is for calculating the shortest distance from each city's census tract to 
+# the nearest (or 3 or 5 nearest) spatial features
+
+# all features are calculated except for cycleway
+
+##########################################################################
+
+## create a panal to store spatial effects ####
+census_panel <- census_geoinfo %>%st_set_geometry(NULL)
+
+#### KNN ####
+# nn function ####
+nn_function <- function(measureFrom,measureTo,k) {
+  measureFrom_Matrix <-
+    as.matrix(measureFrom)
+  measureTo_Matrix <-
+    as.matrix(measureTo)
+  nn <-   
+    get.knnx(measureTo, measureFrom, k)$nn.dist
+  output <-
+    as.data.frame(nn) %>%
+    rownames_to_column(var = "thisPoint") %>%
+    gather(points, point_distance, V1:ncol(.)) %>%
+    arrange(as.numeric(thisPoint)) %>%
+    group_by(thisPoint) %>%
+    summarize(pointDistance = mean(point_distance)) %>%
+    arrange(as.numeric(thisPoint)) %>% 
+    dplyr::select(-thisPoint) %>%
+    pull()
+  
+  return(output)  
+}
+# knn for each spatial effects ####
+census_panel$KNN_college <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(college %>% st_coordinates()),
+                                        1)
+
+census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                           coordinates(restaurant %>% st_coordinates()),
+                                           5)
+
+census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                                 coordinates(public_transport %>% st_coordinates()),
+                                                 5)
+
+census_panel$KNN_office <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(office %>% st_coordinates()),
+                                       5)
+
+census_panel$KNN_retail <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(retail %>% st_coordinates()),
+                                       5)
+
+
+census_panel$KNN_tourism <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(tourism %>% st_coordinates()),
+                                        5)
+
+census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(leisure %>% st_coordinates()),
+                                        5)
+
+## count and density ####
+census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
+# retail 
+retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_retail= n())
+retail_ct$density_retail <- retail_ct$count_retail/retail_ct$area
+
+# office 
+office_ct <- st_join(census_geoinfo %>% st_intersection(boundary), office) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_office= n())
+office_ct$density_office <- office_ct$count_office/office_ct$area
+
+# restaurant 
+restaurant_ct <- st_join(census_geoinfo %>% st_intersection(boundary),restaurant) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_restaurant= n())
+restaurant_ct$density_restaurant <- restaurant_ct$count_restaurant/restaurant_ct$area
+
+# public transport
+public_transport_ct <- st_join(census_geoinfo %>% st_intersection(boundary),public_transport) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_pubtran= n())
+public_transport_ct$density_pubtran <- public_transport_ct$count_pubtran/public_transport_ct$area
+
+# cycleway
+cycleway_ct_len <- st_intersection(cycleway, boundary) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+cycleway_ct_len$total_length <- replace_na(cycleway_ct_len$total_length,0) 
+
+# leisure
+leisure_ct <- st_join(census_geoinfo %>% st_intersection(boundary), leisure) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_leisure= n())
+leisure_ct$density_leisure <- leisure_ct$count_leisure/leisure_ct$area
+
+# tourism
+tourism_ct <- st_join(census_geoinfo %>% st_intersection(boundary), tourism) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_tourism= n())
+tourism_ct$density_tourism <- tourism_ct$count_tourism/tourism_ct$area
+
+# college
+college_ct <- st_join(census_geoinfo %>% st_intersection(boundary), college) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_college= n())
+college_ct$density_college <- college_ct$count_college/college_ct$area
+
+spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
+  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
+  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
+  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_tourism, density_tourism), by = 'GEOID') %>%
+  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_pubtran,density_pubtran), by = 'GEOID') %>%
+  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_restaurant, density_restaurant), by = 'GEOID') %>%
+  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_college, density_college), by = 'GEOID') %>%
+  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, total_length), by = 'GEOID')
+
+spatial_panel <- replace_na(spatial_panel, 0)
+DC_spatial_panel <- spatial_panel
+
+#might have different orgin_ct
+#spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+
+DC_spatial_census <- left_join(DC_spatial_panel, DC_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+DC_spatial_census <- DC_spatial_census %>%
+  mutate(city = "Washington DC") %>%
+  dplyr::select(-area)
+
+DC_spatial_panel_RDS <- file.path(data_directory, "~RData/DC/DC_spatial_panel")
+# saveRDS(DC_spatial_panel,
+#         file = DC_spatial_panel_RDS)
+# 
+# DC_spatial_panel <- readRDS(DC_spatial_panel_RDS)
+
+###
+DC_spatial_census_RDS <- file.path(data_directory, "~RData/DC/DC_spatial_census")
+# saveRDS(DC_spatial_census,
+#         file = DC_spatial_census_RDS)
+# 
+# DC_spatial_census <- readRDS(DC_spatial_census_RDS)
+```
+
+#### Austin
+
+```{r, echo = TRUE, eval = FALSE}
+#********************* the variables******************####
+city_name = "Austin"                              ####
+proj = AU_proj # city projection                         ####
+boundary = AU_Census_geoinfo # service area boundary              ####
+census_ct = AU_Census_ct # census tract ecosocia data ####
+origin_ct = AU_open_ct #census tract with count of trip origins
+census_geoinfo = AU_Census_geoinfo                    ####
+#*****************************************************####
+AU_Census_geoinfo <- AU_Census_geoinfo%>%
+  st_transform(AU_proj)
+
+crs(AU_Census_geoinfo)
+
+# crs(college)
+
+### using osm to grab data####
+college <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+  osmdata_sf(.)
+# 
+college <- st_geometry(college$osm_polygons) %>%
+  st_transform(proj) %>%
+  st_sf()%>%
+  st_intersection(boundary) %>%
+  st_centroid() %>%
+  mutate(Legend = 'College',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# restaurant ####
+restaurant <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
+  osmdata_sf(.)
+
+restaurant <- st_geometry(restaurant$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Restaurant',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# public transport ####
+public_transport <- opq (city_name) %>%
+  add_osm_feature(key = 'public_transport', value = c("stop_position", "station")) %>%
+  osmdata_sf(.)
+
+public_transport <- st_geometry(public_transport$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Public.Transport',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# retail ####
+retail <- opq (city_name) %>%
+  add_osm_feature(key = 'shop') %>%
+  osmdata_sf(.)
+
+retail <- st_geometry(retail$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Retails',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# office ####
+office <- opq (city_name) %>%
+  add_osm_feature(key = 'office') %>%
+  osmdata_sf(.)
+
+office <- st_geometry(office$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Office',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# cycleway ####
+cycleway <- opq (city_name) %>%
+  add_osm_feature(key = 'cycleway') %>%
+  osmdata_sf(.)
+
+cycleway <- st_geometry(cycleway$osm_lines) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Cycleway',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+cycleway %>% st_join(census_geoinfo %>% st_intersection(boundary))
+
+# leisure  ####
+leisure <- opq (city_name) %>%
+  add_osm_feature(key = 'leisure', value = c('adult_gaming_center','amusement_arcade','common','fitness_center','hackerspace','park',
+                                             'pitch','stadium')) %>%
+  osmdata_sf(.)
+
+leisure <- st_geometry(leisure$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Leisure',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# tourism  ####
+tourism <- opq (city_name) %>%
+  add_osm_feature(key = 'tourism', value = c("aquarium", "artwork", "attraction", "gallery", "museumm", "theme_park", 'viewpoint', 'zoo')) %>%
+  osmdata_sf(.)
+
+tourism <- st_geometry(tourism$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Tourism',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+## code to plot and check the OSM data
+ggplot()+
+  geom_sf(data = census_ct, fill = "white")+
+  #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = college, color = "red", size = 1.5)+
+  geom_sf(data = boundary, fill='transparent')+
+  labs(title = paste("Location of offices, retails, and colleges in",city_name),
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
+
+grid.arrange(
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = leisure, color = "lightsalmon",alpha = 0.6)+
+    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of cycleway and leisure places in", city_name),
+         subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = restaurant, color = "turquoise",alpha = 0.6)+
+    geom_sf(data = tourism, color = "hotpink", alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of restaurant and tourism spots in", city_name),
+         subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = office, color = "indianred2", alpha = 0.6, size = 2)+
+    geom_sf(data = retail, color = "orange", alpha = 0.6, size = 2)+
+    geom_sf(data = college, shape = 23, fill = "cornflowerblue", size = 2)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of offices, retails, and colleges in", city_name),
+         subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+    mapTheme(),
+  ncol = 3)
+
+
+##########################################################################
+# This script is for calculating the shortest distance from each city's census tract to 
+# the nearest (or 3 or 5 nearest) spatial features
+
+# all features are calculated except for cycleway
+
+##########################################################################
+
+## create a panal to store spatial effects ####
+census_panel <- census_geoinfo %>% st_set_geometry(NULL)
+
+#### KNN ####
+# nn function ####
+nn_function <- function(measureFrom,measureTo,k) {
+  measureFrom_Matrix <-
+    as.matrix(measureFrom)
+  measureTo_Matrix <-
+    as.matrix(measureTo)
+  nn <-   
+    get.knnx(measureTo, measureFrom, k)$nn.dist
+  output <-
+    as.data.frame(nn) %>%
+    rownames_to_column(var = "thisPoint") %>%
+    gather(points, point_distance, V1:ncol(.)) %>%
+    arrange(as.numeric(thisPoint)) %>%
+    group_by(thisPoint) %>%
+    summarize(pointDistance = mean(point_distance)) %>%
+    arrange(as.numeric(thisPoint)) %>% 
+    dplyr::select(-thisPoint) %>%
+    pull()
+  
+  return(output)  
+}
+# knn for each spatial effects ####
+census_panel$KNN_college <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(college %>% st_coordinates()),
+                                        1)
+
+census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                           coordinates(restaurant %>% st_coordinates()),
+                                           5)
+
+census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                                 coordinates(public_transport %>% st_coordinates()),
+                                                 5)
+
+census_panel$KNN_office <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(office %>% st_coordinates()),
+                                       5)
+
+census_panel$KNN_retail <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(retail %>% st_coordinates()),
+                                       5)
+
+
+census_panel$KNN_tourism <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(tourism %>% st_coordinates()),
+                                        5)
+
+census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(leisure %>% st_coordinates()),
+                                        5)
+
+## count and density ####
+census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
+
+# retail 
+retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_retail= n())
+retail_ct$density_retail <- retail_ct$count_retail/retail_ct$area
+
+# office 
+office_ct <- st_join(census_geoinfo %>% st_intersection(boundary), office) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_office= n())
+office_ct$density_office <- office_ct$count_office/office_ct$area
+
+# restaurant 
+restaurant_ct <- st_join(census_geoinfo %>% st_intersection(boundary),restaurant) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_restaurant= n())
+restaurant_ct$density_restaurant <- restaurant_ct$count_restaurant/restaurant_ct$area
+
+# public transport
+public_transport_ct <- st_join(census_geoinfo %>% st_intersection(boundary),public_transport) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_pubtran= n())
+public_transport_ct$density_pubtran <- public_transport_ct$count_pubtran/public_transport_ct$area
+
+# cycleway
+cycleway_ct_len <- st_intersection(cycleway, boundary) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+cycleway_ct_len$total_length <- replace_na(cycleway_ct_len$total_length,0) 
+
+# leisure
+leisure_ct <- st_join(census_geoinfo %>% st_intersection(boundary), leisure) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_leisure= n())
+leisure_ct$density_leisure <- leisure_ct$count_leisure/leisure_ct$area
+
+# tourism
+tourism_ct <- st_join(census_geoinfo %>% st_intersection(boundary), tourism) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_tourism= n())
+tourism_ct$density_tourism <- tourism_ct$count_tourism/tourism_ct$area
+
+# college
+college_ct <- st_join(census_geoinfo %>% st_intersection(boundary), college) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_college= n())
+college_ct$density_college <- college_ct$count_college/college_ct$area
+
+spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
+  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
+  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
+  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_tourism, density_tourism), by = 'GEOID') %>%
+  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_pubtran,density_pubtran), by = 'GEOID') %>%
+  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_restaurant, density_restaurant), by = 'GEOID') %>%
+  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_college, density_college), by = 'GEOID') %>%
+  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, total_length), by = 'GEOID')
+
+spatial_panel <- replace_na(spatial_panel, 0)
+spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+spatial_census <- spatial_census %>%
+  mutate(city = city_name)
+
+AU_spatial_panel <- spatial_panel
+AU_spatial_census <- spatial_census
+
+AU_spatial_panel_RDS <- file.path(data_directory, "~RData/AU/AU_spatial_panel")
+# saveRDS(AU_spatial_panel,
+#         file = AU_spatial_panel_RDS)
+# AU_spatial_panel <- readRDS(AU_spatial_panel_RDS)
+
+
+AU_spatial_census_RDS <- file.path(data_directory, "~RData/AU/AU_spatial_census")
+# saveRDS(AU_spatial_census,
+#         file = AU_spatial_census_RDS)
+# AU_spatial_census <- readRDS(AU_spatial_census_RDS)
+
+```
+
+#### Minneapolis
+
+```{r, echo = TRUE, eval = FALSE}
+#********************* the variables******************####
+city_name = "Minneapolis"                              ####
+proj = MNP_proj # city projection                         ####
+boundary = MNP_Census_geoinfo # service area boundary              ####
+census_ct = MNP_Census_ct # census tract ecosocia data ####
+origin_ct = MNP_open_ct #census tract with count of trip origins
+census_geoinfo = MNP_Census_geoinfo                    ####
+#*****************************************************####
+MNP_Census_geoinfo <- MNP_Census_geoinfo%>%
+  st_transform(MNP_proj)
+
+crs(MNP_Census_geoinfo)
+
+crs(college)
+
+### using osm to grab data####
+college <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+  osmdata_sf(.)
+# 
+college <- st_geometry(college$osm_polygons) %>%
+  st_transform(proj) %>%
+  st_sf()%>%
+  st_intersection(boundary) %>%
+  st_centroid() %>%
+  mutate(Legend = 'College',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# restaurant ####
+restaurant <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
+  osmdata_sf(.)
+
+restaurant <- st_geometry(restaurant$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Restaurant',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# public transport ####
+public_transport <- opq (city_name) %>%
+  add_osm_feature(key = 'public_transport', value = c("stop_position", "station")) %>%
+  osmdata_sf(.)
+
+public_transport <- st_geometry(public_transport$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Public.Transport',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# retail ####
+retail <- opq (city_name) %>%
+  add_osm_feature(key = 'shop') %>%
+  osmdata_sf(.)
+
+retail <- st_geometry(retail$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Retails',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# office ####
+office <- opq (city_name) %>%
+  add_osm_feature(key = 'office') %>%
+  osmdata_sf(.)
+
+office <- st_geometry(office$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Office',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# cycleway ####
+cycleway <- opq (city_name) %>%
+  add_osm_feature(key = 'cycleway') %>%
+  osmdata_sf(.)
+
+cycleway <- st_geometry(cycleway$osm_lines) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Cycleway',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+cycleway %>% st_join(census_geoinfo %>% st_intersection(boundary))
+
+# leisure  ####
+leisure <- opq (city_name) %>%
+  add_osm_feature(key = 'leisure', value = c('adult_gaming_center','amusement_arcade','common','fitness_center','hackerspace','park',
+                                             'pitch','stadium')) %>%
+  osmdata_sf(.)
+
+leisure <- st_geometry(leisure$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Leisure',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# tourism  ####
+tourism <- opq (city_name) %>%
+  add_osm_feature(key = 'tourism', value = c("aquarium", "artwork", "attraction", "gallery", "museumm", "theme_park", 'viewpoint', 'zoo')) %>%
+  osmdata_sf(.)
+
+tourism <- st_geometry(tourism$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Tourism',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+## code to plot and check the OSM data
+ggplot()+
+  geom_sf(data = census_ct, fill = "white")+
+  #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = college, color = "red", size = 1.5)+
+  geom_sf(data = boundary, fill='transparent')+
+  labs(title = paste("Location of offices, retails, and colleges in",city_name),
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
+
+grid.arrange(
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+    geom_sf(data = leisure, color = "lightsalmon",alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of cycleway and leisure places in", city_name),
+         subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = restaurant, color = "turquoise",alpha = 0.6)+
+    geom_sf(data = tourism, color = "hotpink", alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of restaurant and tourism spots in", city_name),
+         subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = office, color = "indianred2", alpha = 0.6, size = 2)+
+    geom_sf(data = retail, color = "orange", alpha = 0.6, size = 2)+
+    geom_sf(data = college, shape = 23, fill = "cornflowerblue", size = 2)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of offices, retails, and colleges in", city_name),
+         subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+    mapTheme(),
+  ncol = 3)
+
+
+##########################################################################
+# This script is for calculating the shortest distance from each city's census tract to 
+# the nearest (or 3 or 5 nearest) spatial features
+
+# all features are calculated except for cycleway
+
+##########################################################################
+
+## create a panal to store spatial effects ####
+census_panel <- census_geoinfo %>% st_set_geometry(NULL)
+
+#### KNN ####
+# nn function ####
+nn_function <- function(measureFrom,measureTo,k) {
+  measureFrom_Matrix <-
+    as.matrix(measureFrom)
+  measureTo_Matrix <-
+    as.matrix(measureTo)
+  nn <-   
+    get.knnx(measureTo, measureFrom, k)$nn.dist
+  output <-
+    as.data.frame(nn) %>%
+    rownames_to_column(var = "thisPoint") %>%
+    gather(points, point_distance, V1:ncol(.)) %>%
+    arrange(as.numeric(thisPoint)) %>%
+    group_by(thisPoint) %>%
+    summarize(pointDistance = mean(point_distance)) %>%
+    arrange(as.numeric(thisPoint)) %>% 
+    dplyr::select(-thisPoint) %>%
+    pull()
+  
+  return(output)  
+}
+# knn for each spatial effects ####
+census_panel$KNN_college <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(college %>% st_coordinates()),
+                                        1)
+
+census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                           coordinates(restaurant %>% st_coordinates()),
+                                           5)
+
+census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                                 coordinates(public_transport %>% st_coordinates()),
+                                                 5)
+
+census_panel$KNN_office <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(office %>% st_coordinates()),
+                                       5)
+
+census_panel$KNN_retail <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(retail %>% st_coordinates()),
+                                       5)
+
+
+census_panel$KNN_tourism <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(tourism %>% st_coordinates()),
+                                        5)
+
+census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(leisure %>% st_coordinates()),
+                                        5)
+
+## count and density ####
+census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
+
+# retail 
+retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_retail= n())
+retail_ct$density_retail <- retail_ct$count_retail/retail_ct$area
+
+# office 
+office_ct <- st_join(census_geoinfo %>% st_intersection(boundary), office) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_office= n())
+office_ct$density_office <- office_ct$count_office/office_ct$area
+
+# restaurant 
+restaurant_ct <- st_join(census_geoinfo %>% st_intersection(boundary),restaurant) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_restaurant= n())
+restaurant_ct$density_restaurant <- restaurant_ct$count_restaurant/restaurant_ct$area
+
+# public transport
+public_transport_ct <- st_join(census_geoinfo %>% st_intersection(boundary),public_transport) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_pubtran= n())
+public_transport_ct$density_pubtran <- public_transport_ct$count_pubtran/public_transport_ct$area
+
+# cycleway
+cycleway_ct_len <- st_intersection(cycleway, boundary) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+cycleway_ct_len$total_length <- replace_na(cycleway_ct_len$total_length,0) 
+
+# leisure
+leisure_ct <- st_join(census_geoinfo %>% st_intersection(boundary), leisure) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_leisure= n())
+leisure_ct$density_leisure <- leisure_ct$count_leisure/leisure_ct$area
+
+# tourism
+tourism_ct <- st_join(census_geoinfo %>% st_intersection(boundary), tourism) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_tourism= n())
+tourism_ct$density_tourism <- tourism_ct$count_tourism/tourism_ct$area
+
+# college
+college_ct <- st_join(census_geoinfo %>% st_intersection(boundary), college) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_college= n())
+college_ct$density_college <- college_ct$count_college/college_ct$area
+
+spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
+  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
+  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
+  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_tourism, density_tourism), by = 'GEOID') %>%
+  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_pubtran,density_pubtran), by = 'GEOID') %>%
+  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_restaurant, density_restaurant), by = 'GEOID') %>%
+  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_college, density_college), by = 'GEOID') %>%
+  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, total_length), by = 'GEOID')
+
+spatial_panel <- replace_na(spatial_panel, 0)
+spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+spatial_census <- spatial_census %>%
+  mutate(city = city_name)
+
+MNP_spatial_panel <- spatial_panel
+MNP_spatial_census <- left_join(MNP_spatial_panel, MNP_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(-centroid_X, -centroid_Y), by = 'GEOID')
+MNP_spatial_census <- MNP_spatial_census %>%
+  mutate(city = "Minneapolis")
+
+MNP_spatial_panel_RDS <- file.path(data_directory, "~RData/MNP/MNP_spatial_panel")
+#  saveRDS(MNP_spatial_panel,
+#         file = MNP_spatial_panel_RDS)
+# MNP_spatial_panel <- readRDS(MNP_spatial_panel_RDS)
+
+
+MNP_spatial_census_RDS <- file.path(data_directory, "~RData/MNP/MNP_spatial_census")
+#  saveRDS(MNP_spatial_census,
+#         file = MNP_spatial_census_RDS)
+# MNP_spatial_census <- readRDS(MNP_spatial_census_RDS)
+```
+
+#### Kansas City
+
+```{r, echo = TRUE, eval = FALSE}
+
+```
+
+#### Chicago
+
+```{r, echo = TRUE, eval = FALSE}
+#********************* the variables******************####
+city_name = "Chicago"                              ####
+proj = CH_proj # city projection                         ####
+boundary = CH_Census_ct # service area boundary              ####
+census_ct = CH_Census_ct # census tract ecosocia data ####
+origin_ct = CH_open_ct #census tract with count of trip origins
+census_geoinfo = CH_Census_ct                    ####
+#*****************************************************####
+
+### using osm to grab data####
+college <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+  osmdata_sf(.)
+# 
+college <- st_geometry(college$osm_polygons) %>%
+  st_transform(proj) %>%
+  st_sf()%>%
+  st_intersection(boundary) %>%
+  st_centroid() %>%
+  mutate(Legend = 'College',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# restaurant ####
+restaurant <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
+  osmdata_sf(.)
+
+restaurant <- st_geometry(restaurant$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Restaurant',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# public transport ####
+public_transport <- opq (city_name) %>%
+  add_osm_feature(key = 'public_transport', value = c("stop_position", "station")) %>%
+  osmdata_sf(.)
+
+public_transport <- st_geometry(public_transport$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Public.Transport',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# retail ####
+retail <- opq (city_name) %>%
+  add_osm_feature(key = 'shop') %>%
+  osmdata_sf(.)
+
+retail <- st_geometry(retail$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Retails',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# office ####
+office <- opq (city_name) %>%
+  add_osm_feature(key = 'office') %>%
+  osmdata_sf(.)
+
+office <- st_geometry(office$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Office',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# cycleway ####
+cycleway <- opq (city_name) %>%
+  add_osm_feature(key = 'cycleway') %>%
+  osmdata_sf(.)
+
+cycleway <- st_geometry(cycleway$osm_lines) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Cycleway',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+cycleway %>% st_join(census_geoinfo %>% st_intersection(boundary))
+
+# leisure  ####
+leisure <- opq (city_name) %>%
+  add_osm_feature(key = 'leisure', value = c('adult_gaming_center','amusement_arcade','common','fitness_center','hackerspace','park',
+                                             'pitch','stadium')) %>%
+  osmdata_sf(.)
+
+leisure <- st_geometry(leisure$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Leisure',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# tourism  ####
+tourism <- opq (city_name) %>%
+  add_osm_feature(key = 'tourism', value = c("aquarium", "artwork", "attraction", "gallery", "museumm", "theme_park", 'viewpoint', 'zoo')) %>%
+  osmdata_sf(.)
+
+tourism <- st_geometry(tourism$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Tourism',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+## code to plot and check the OSM data
+ggplot()+
+  geom_sf(data = census_ct, fill = "white")+
+  #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = college, color = "red", size = 1.5)+
+  geom_sf(data = boundary, fill='transparent')+
+  labs(title = paste("Location of offices, retails, and colleges in",city_name),
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
+
+grid.arrange(
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+    geom_sf(data = leisure, color = "lightsalmon",alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of cycleway and leisure places in", city_name),
+         subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = restaurant, color = "turquoise",alpha = 0.6)+
+    geom_sf(data = tourism, color = "hotpink", alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of restaurant and tourism spots in", city_name),
+         subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = office, color = "indianred2", alpha = 0.6, size = 2)+
+    geom_sf(data = retail, color = "orange", alpha = 0.6, size = 2)+
+    geom_sf(data = college, shape = 23, fill = "cornflowerblue", size = 2)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of offices, retails, and colleges in", city_name),
+         subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+    mapTheme(),
+  ncol = 3)
+
+
+##########################################################################
+# This script is for calculating the shortest distance from each city's census tract to 
+# the nearest (or 3 or 5 nearest) spatial features
+
+# all features are calculated except for cycleway
+
+##########################################################################
+
+## create a panal to store spatial effects ####
+census_panel <- census_geoinfo %>% dplyr::select(-tractce10)
+glimpse(census_panel)
+
+#### KNN ####
+# nn function ####
+nn_function <- function(measureFrom,measureTo,k) {
+  measureFrom_Matrix <-
+    as.matrix(measureFrom)
+  measureTo_Matrix <-
+    as.matrix(measureTo)
+  nn <-   
+    get.knnx(measureTo, measureFrom, k)$nn.dist
+  output <-
+    as.data.frame(nn) %>%
+    rownames_to_column(var = "thisPoint") %>%
+    gather(points, point_distance, V1:ncol(.)) %>%
+    arrange(as.numeric(thisPoint)) %>%
+    group_by(thisPoint) %>%
+    summarize(pointDistance = mean(point_distance)) %>%
+    arrange(as.numeric(thisPoint)) %>% 
+    dplyr::select(-thisPoint) %>%
+    pull()
+  
+  return(output)  
+}
+# knn for each spatial effects ####
+census_panel$KNN_college <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(college %>% st_coordinates()),
+                                        1)
+
+census_panel$KNN_restaurant <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                           coordinates(restaurant %>% st_coordinates()),
+                                           5)
+
+census_panel$KNN_public_transport <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                                 coordinates(public_transport %>% st_coordinates()),
+                                                 5)
+
+census_panel$KNN_office <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(office %>% st_coordinates()),
+                                       5)
+
+census_panel$KNN_retail <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                       coordinates(retail %>% st_coordinates()),
+                                       5)
+
+
+census_panel$KNN_tourism <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(tourism %>% st_coordinates()),
+                                        5)
+
+census_panel$KNN_leisure <- nn_function(coordinates(as.data.frame(census_panel)[,2:3]),
+                                        coordinates(leisure %>% st_coordinates()),
+                                        5)
+
+## count and density ####
+census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
+# retail 
+retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_retail= n())
+retail_ct$density_retail <- retail_ct$count_retail/retail_ct$area
+
+# office 
+office_ct <- st_join(census_geoinfo %>% st_intersection(boundary), office) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_office= n())
+office_ct$density_office <- office_ct$count_office/office_ct$area
+
+# restaurant 
+restaurant_ct <- st_join(census_geoinfo %>% st_intersection(boundary),restaurant) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_restaurant= n())
+restaurant_ct$density_restaurant <- restaurant_ct$count_restaurant/restaurant_ct$area
+
+# public transport
+public_transport_ct <- st_join(census_geoinfo %>% st_intersection(boundary),public_transport) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_pubtran= n())
+public_transport_ct$density_pubtran <- public_transport_ct$count_pubtran/public_transport_ct$area
+
+# cycleway
+cycleway_ct_len <- st_intersection(cycleway, boundary) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(geoid10) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(census_geoinfo, on='geoid10', all.y=T) %>%
+  st_as_sf()
+cycleway_ct_len$total_length <- replace_na(cycleway_ct_len$total_length,0) 
+
+# leisure
+leisure_ct <- st_join(census_geoinfo %>% st_intersection(boundary), leisure) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_leisure= n())
+leisure_ct$density_leisure <- leisure_ct$count_leisure/leisure_ct$area
+
+# tourism
+tourism_ct <- st_join(census_geoinfo %>% st_intersection(boundary), tourism) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_tourism= n())
+tourism_ct$density_tourism <- tourism_ct$count_tourism/tourism_ct$area
+
+# college
+college_ct <- st_join(census_geoinfo %>% st_intersection(boundary), college) %>%
+  group_by(geoid10,area) %>%
+  summarise(count_college= n())
+college_ct$density_college <- college_ct$count_college/college_ct$area
+
+spatial_panel <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(geoid10, count_retail, density_retail), by = 'geoid10') %>%
+  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_office, density_office), by = 'geoid10') %>%
+  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_leisure, density_leisure), by = 'geoid10') %>%
+  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_tourism, density_tourism), by = 'geoid10') %>%
+  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_pubtran,density_pubtran), by = 'geoid10') %>%
+  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_restaurant, density_restaurant), by = 'geoid10') %>%
+  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, count_college, density_college), by = 'geoid10') %>%
+  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(geoid10, total_length), by = 'geoid10')
+
+spatial_panel <- replace_na(spatial_panel, 0)
+
+##orgin_ct might change afterwards
+spatial_census <- left_join(spatial_panel, origin_ct%>%st_set_geometry(NULL)%>%dplyr::select(origins_cnt, geoid10), by = 'geoid10')
+spatial_census <- spatial_census %>%
+  mutate(city = city_name)
+
+CH_spatial_panel <- spatial_panel
+
+CH_spatial_census <- left_join(CH_spatial_panel, CH_open_ct%>%st_set_geometry(NULL)%>%dplyr::select(origins_cnt, geoid10), by = 'geoid10')
+CH_spatial_census <- CH_spatial_census %>%
+  mutate(city = 'Chicago')
+
+CH_spatial_panel_RDS <- file.path(data_directory, "~RData/Chicago/CH_spatial_panel")
+# saveRDS(CH_spatial_panel,
+#         file = CH_spatial_panel_RDS)
+# CH_spatial_panel <- readRDS(CH_spatial_panel_RDS)
+
+
+CH_spatial_census_RDS <- file.path(data_directory, "~RData/Chicago/CH_spatial_census")
+# saveRDS(CH_spatial_census,
+#         file = CH_spatial_census_RDS)
+# CH_spatial_census <- readRDS(CH_spatial_census_RDS)
+```
+
+### 8.7 Louisville rebalancing analysis
+
+```{r, echo = TRUE, eval = FALSE}
+# Filter for user events, sort, and add duration and energy_diff columns
+LV_rebal_user_only <- LV_rebal_sf %>% 
+  filter(str_detect(reason, "user"))%>% 
+  arrange(vehicleId, occurredAt) # sort by vehicle ID and time
+
+### Helper Functions
+# Define function for calcuating trip durations and energy levels ----
+calc_tripDuration_and_energy <- function(x) {
+  
+  output <- list() # initialize list
+  
+  for (veh in unique(x$vehicleId)) { # for each unique vehicle
+    this_vehicle_set <- x %>% filter(vehicleId == veh) # filter for that vehicle
+    print(veh) # print so we can see the progress of the loop
+    
+    for (i in 1:nrow(this_vehicle_set)) { # for each row of this vehicle
+      if (i%%2 == 1) { # if this is an odd number row
+        
+        # the trip duration is the time for the next row minus the time for this row
+        this_vehicle_set$duration[i] <- difftime(this_vehicle_set$occurredAt[i+1], this_vehicle_set$occurredAt[i], units = 'mins')
+        
+        # same with energy level
+        this_vehicle_set$energy_diff[i] <- this_vehicle_set$vehicleEnergyLevel[i+1]- this_vehicle_set$vehicleEnergyLevel[i] 
+        } else {}
+    }
+    output[[veh]] <- this_vehicle_set
+  }
+  
+  as.data.frame(data.table::rbindlist(output,
+                                      idcol = "vehicleId"))
+  
+}
+
+# One with a start and end time and start and end location ----
+combine_rowPairs <- function(x) { # x should be the output of calc_tripDuration_and_energy()
+  
+  temp <- data.frame("vehicleID" = c(0), # initialize temp dataframe with columns
+                     "start_time" = c(0), 
+                     "end_time" = c(0), 
+                     "trip_origin" = c(0), 
+                     "trip_dest" = c(0), 
+                     "duration" = c(0), 
+                     "energy_diff" = c(0))
+  
+  output <- list() # initialize output list
+  
+  for (i in seq(nrow(x) - 1)) { 
+    # need to do minus 1 b/c if there is an odd number of rows, the last row of the trip_dest column will be empty
+    # and cannot be binded with the other rows
+    if (i%%2 == 1) {
+      
+      print(i)
+
+      temp$vehicleID = x$vehicleId[i]
+      temp$start_time = x$occurredAt[i]
+      temp$end_time = x$occurredAt[i+1]
+      temp$trip_origin = x$location[i]
+      temp$trip_dest = x$location[i+1]
+      temp$duration = x$duration[i]
+      temp$energy_diff = x$energy_diff[i]
+      
+      output[[i]] <- temp
+      
+    } else {}
+  }
+  
+  output <- as.data.frame(data.table::rbindlist(output))
+  
+}
+
+# June 2019 ----
+LV_rebal_user_only_0619 <- LV_rebal_user_only %>%
+  filter(year(occurredAt) == 2019, month(occurredAt) == 6)
+
+LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619 %>%
+  calc_tripDuration_and_energy()
+
+LV_rebal_user_only_0619_combined_rowPairs <- LV_rebal_user_only_0619_combined_rowPairs %>%
+  combine_rowPairs()
+
+# ggplot(LV_rebal_user_only_0619_combined_rowPairs, aes(duration))+
+#   geom_histogram() +
+#   xlim(0, 5000) +
+#   ylim(0, 250)
+
+# All user data ----
+LV_rebal_user_only_combined_rowPairs <- LV_rebal_user_only %>%
+  calc_tripDuration_and_energy() %>%
+  combine_rowPairs()
+
+LV_rebal_user_only_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_combined_rowPairs,
+#         file = LV_rebal_user_only_combined_rowPairs_RDS)
+
+LV_rebal_user_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_user_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_user_only_0619_combined_rowPairs,
+#         file = LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
+# Read the saved object with the code below
+# LV_rebal_user_only_combined_rowPairs <- readRDS(LV_rebal_user_only_combined_rowPairs_RDS)
+# LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+
+### Filter for rebalance events, sort, and add duration and energy_diff columns
+LV_rebal_rebalance_only <- LV_rebal_sf %>% 
+  filter(str_detect(reason, "rebalance"))%>% 
+  arrange(vehicleId, occurredAt) # sort by vehicle ID and time
+
+### Trim the dataset to be "pick-up; drop-off" format b/c sometimes there is [reb pick up, reb pick up, reb drop off]
+LV_reb_ID_list <- c()
+for (veh in unique(LV_rebal_rebalance_only$vehicleId)) {
+  this_vehicle_set <- LV_rebal_rebalance_only %>% filter(vehicleId == veh)
+  print(veh)
+  output_list <- c() # initialize list
+  for (i in 1:nrow(this_vehicle_set)) {
+      if (this_vehicle_set$reason[i] == 'rebalance drop off') {
+        output_list <- append(output_list, c(this_vehicle_set$id[i], this_vehicle_set$id[i-1])) #store the id of rebalance drop off and rebalance pick up before it
+  }}
+    LV_reb_ID_list <- append(LV_reb_ID_list, output_list) #this should store all the [pick-up, drop-off] pairs
+  }
+
+
+LV_rebal_rebalance_only_trim1 <- LV_rebal_rebalance_only %>%
+  filter(LV_rebal_rebalance_only$id %in% LV_reb_ID_list) # Trim the data set
+
+### Notice the dataset has some weird [pick-up, drop-off, drop-off] and some of them does not have [pick-up] info at all
+### We trim the dataset one more time by the other way round
+LV_reb_ID_list2 <- c()
+for (veh in unique(LV_rebal_rebalance_only_trim1$vehicleId)) {
+  this_vehicle_set <- LV_rebal_rebalance_only_trim1 %>% filter(vehicleId == veh)
+  print(veh)
+  output_list <- c() # initialize list
+  for (i in 1:nrow(this_vehicle_set)) {
+    if (this_vehicle_set$reason[i] == 'rebalance pick up') {
+      output_list <- append(output_list, c(this_vehicle_set$id[i], this_vehicle_set$id[i+1])) #store the id of rebalance drop off and rebalance pick up before it
+    }}
+  LV_reb_ID_list2 <- append(LV_reb_ID_list2, output_list) #this should store all the [pick-up, drop-off] pairs
+}
+
+# This should be our final dataset to use to generate trip origin-destination table
+LV_rebal_rebalance_only_trim2 <- LV_rebal_rebalance_only_trim1 %>%
+  filter(LV_rebal_rebalance_only_trim1$id %in% LV_reb_ID_list2)
+
+LV_rebal_reb_only_combined_rowPairs <- LV_rebal_rebalance_only_trim2 %>%
+  calc_tripDuration_and_energy()
+
+LV_rebal_reb_only_combined_rowPairs <- LV_rebal_reb_only_combined_rowPairs%>%
+  combine_rowPairs()
+
+ggplot(LV_rebal_reb_only_combined_rowPairs, aes(duration))+
+  geom_histogram() +
+  xlim(0, 5000) +
+  ylim(0, 500)
+
+
+# June 2019 ----
+LV_rebal_reb_only_0619_combined_rowPairs  <- LV_rebal_reb_only_combined_rowPairs %>%
+  filter(year(start_time) == 2019) %>%
+  filter(month(start_time) == 6 |month(end_time) == 6)
+
+# Save & Load
+LV_rebal_reb_only_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                      "~RData/Louisville/LV_rebal_reb_only_combined_rowPairs")
+
+LV_rebal_reb_only_0619_combined_rowPairs_RDS <- file.path(data_directory, 
+                                                     "~RData/Louisville/LV_rebal_reb_only_0619_combined_rowPairs")
+
+# saveRDS(LV_rebal_reb_only_0619_combined_rowPairs,
+#                 file = LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+# saveRDS(LV_rebal_reb_only_combined_rowPairs,
+#         file = LV_rebal_reb_only_combined_rowPairs_RDS)
+
+# Read the saved object with the code below
+# LV_rebal_reb_only_combined_rowPairs <- readRDS(LV_rebal_reb_only_combined_rowPairs_RDS)
+# LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+
+# plot by day of week
+# LV_rebal_user_only_0619_combined_rowPairs obtained by running
+# LV_rebal_user_only_0619_combined_rowPairs <- readRDS(LV_rebal_user_only_0619_combined_rowPairs_RDS)
+# LV_rebal_reb_only_0619_combined_rowPairs <- readRDS(LV_rebal_reb_only_0619_combined_rowPairs_RDS)
+
+# plotting
+LV_rebal_user_only_0619_combined_rowPairs$start_time <- with_tz(LV_rebal_user_only_0619_combined_rowPairs$start_time,tz='EST')
+ggplot(LV_rebal_user_only_0619_combined_rowPairs %>% mutate(hour = hour(start_time), dotw= weekdays(start_time)))+
+    geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
+    labs(title="Scooter trips in Louisville, by day of the week, June, 2019",
+                  x="Hour", 
+                  y="Trip Counts")+
+   xlim(0, 23)+
+   plotTheme
+
+LV_rebal_reb_only_0619_combined_rowPairs$start_time <- with_tz(LV_rebal_reb_only_0619_combined_rowPairs$start_time,tz='EST')
+ggplot(LV_rebal_reb_only_0619_combined_rowPairs %>% mutate(hour = hour(start_time), dotw= weekdays(start_time)))+
+    geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
+    labs(title="Rebalancing activity in Louisville, by day of the week, June, 2019",
+                   x="Hour", 
+                   y="Trip Counts")+
+   xlim(0, 23)+
+   scale_color_viridis(discrete = T)+
+   plotTheme
+
+
+# plot the frequency of rebalancing for each scooter ---- 
+# by month and year
+LV_rebal_byScooter_monthYear <- LV_rebal_sf %>%
+  subset(startsWith(LV_rebal_sf$reason,'rebalance')) %>%
+  group_by(year(occurredAt), month(occurredAt)) %>%
+  summarise(count = n(), per = count / length(unique(vehicleId))) %>% 
+  rename(year = 'year(occurredAt)',
+         month = 'month(occurredAt)') %>% 
+  mutate(month = ifelse(month <= 9, 
+                        paste('0', month, sep = ''), 
+                        as.character(month)),
+         date = paste(year, month, sep = ''))
+
+ ggplot(data = LV_rebal_byScooter_monthYear, 
+       aes(date, per, group = 1))+
+  geom_line(size = 1) +
+  plotTheme
+
+# by day of week
+LV_rebal_byScooter_DOW <- LV_rebal_rebalance_only %>%
+  group_by(month(occurredAt), weekdays(occurredAt)) %>%
+  summarise(count = n(), per = count / length(unique(vehicleId))) %>% 
+  rename(month = 'month(occurredAt)',
+         weekdays = 'weekdays(occurredAt)') %>% 
+  group_by(weekdays) %>% 
+  summarise(perd = mean(per)) %>% 
+  mutate(weekdays = factor(weekdays,
+                           levels = c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')))
+
+ggplot(data = LV_rebal_byScooter_DOW, aes(weekdays, perd, group = 1))+
+  geom_line(size = 1) +
+  plotTheme
+
+# rebalance only
+LV_rebal_DOW_data <- LV_rebal_rebalance_only %>% 
+  mutate(hour = hour(occurredAt),
+         weekday = lubridate::wday(occurredAt, label = TRUE))
+
+LV_rebal_DOW_data %>% 
+  ggplot() +
+  geom_freqpoly(aes(hour, color = weekday), binwidth = 1) +
+  labs(title = "Scooter Rebalancing in Louisville by day of week and hour",
+       x="Hour", 
+       y="Trip Counts")+
+  xlim(0, 23)+
+  theme_minimal()
+
+# user only
+LV_user_DOW_data <- LV_rebal_user_only %>% 
+  mutate(hour = hour(occurredAt),
+         weekday = lubridate::wday(occurredAt, label = TRUE))
+
+LV_user_DOW_data %>% 
+  ggplot() +
+  geom_freqpoly(aes(hour, color = weekday), binwidth = 1) +
+  labs(title = "Scooter User Activity in Louisville by day of week and hour",
+       x="Hour", 
+       y="Trip Counts")+
+  xlim(0, 23)+
+  theme_minimal()
+
+# Which companies contribute most to rebalancing? ---- 
+LV_company_contribution <- as.data.frame(prop.table(table(LV_rebal_rebalance_only$operators)),
+                                         stringsAsFactors = FALSE) %>% 
+  rename(Provider = Var1,
+         Proportion = Freq) %>% 
+  mutate(Proportion = round(as.numeric(Proportion), 2))
+
+LV_company_contribution %>% 
+  kable(caption = "Contribution by providers") %>%
+  kable_styling("striped", full_width = F,position = "center") %>%
+  row_spec(2, color = "white", background = "#33638dff") %>%
+  row_spec(4, color = "white", background = "#33638dff")
+
+###### MATT'S IMPLEMENTATION ----
+plan(multiprocess) ## FOR PARALLEL PROCESSING
+
+LV_active_status <- c("user drop off",
+                      "rebalance drop off",
+                      "maintenance drop off",
+                      "service start",
+                      "user pick up")
+
+LV_reserved_status <- c("user pick up")
+
+LV_inactive_status <- c("rebalance pick up",
+                        "maintenance pick up",
+                        "service end",
+                        "low battery",
+                        "maintenance")
+
+time_intervals <- seq(from = as.POSIXct("2018-11-15 07:00:00 EDT"), 
+                      to = as.POSIXct("2019-12-15 07:00:00 EDT"),
+                      by = "1 week")
+
+LV_extract_latest_status2 <- function(trip_dat, datetime, buffer, 
+                                      Astatus = LV_active_status){
+  time <- as.POSIXct(datetime)
+  tmp <- trip_dat[which(trip_dat$occurredAt <= time),]
+  # first pass to modify is data remains
+  if(nrow(tmp) > 0) {
+    tmp <- tmp[order(tmp$occurredAt),]
+    tmp <- tmp[nrow(tmp),]
+    tmp <- tmp[as.numeric(time - tmp$occurredAt) <= buffer,]
+    tmp <- tmp[tmp$reason %in% Astatus,] 
+  }
+  # 2nd pass if the above still had rows (e.g. stilla active)
+  if(nrow(tmp) > 0) {
+    output <- tmp
+    output$Date <- as.Date(output$occurredAt)
+    output$Hour <- lubridate::hour(output$occurredAt)
+    output$active <- 1
+    output <- output[,c("vehicleId", "Date", "Hour", 
+                        "operators", "active", "long", "lat")]
+  } else { # if the scooter is "unavailable"
+    output <- data.frame(vehicleId = trip_dat$vehicleId[1],
+                         Date = as.Date(time),
+                         Hour = hour(time),
+                         operators = trip_dat$operators[1],
+                         active = 0,
+                         long = NA_real_,
+                         lat = NA_real_,
+                         stringsAsFactors = FALSE)
+  }
+  return(output)
+}
+
+new_func_parallel <- function(...){
+  rebal_lst <- LV_rebal_sf %>% 
+    mutate(long = st_coordinates(.)[,1], 
+           lat = st_coordinates(.)[,2]) %>%
+    st_drop_geometry() %>%
+    split(.$vehicleId)
+  
+  LV_rebal_sf_list_i <- future_map(time_intervals,
+                                   function(x) map(rebal_lst, function(y){LV_extract_latest_status2(y, x, 10)}) %>%
+                                     bind_rows() %>% 
+                                     mutate(audit_date = x), .progress = TRUE) %>% 
+    bind_rows()
+}
+
+# new_results_parallel <- new_func_parallel() # same as LV_rebal_sf_list
+
+LV_new_results_parallel_RDS <- file.path(data_directory, 
+                                         "~RData/Louisville/LV_new_results_parallel")
+
+# saveRDS(new_results_parallel,
+#         file = LV_new_results_parallel_RDS)
+
+# new_results_parallel <- readRDS(LV_new_results_parallel_RDS)
+
+LV_rebal_sf_list_2 <- new_results_parallel %>% 
+  filter(!is.na(long),
+         !is.na(lat)) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj, remove = FALSE) %>% 
+  st_join(., LV_distro_areas %>% dplyr::select(Dist_Zone)) %>% 
+  st_drop_geometry() %>% 
+  mutate(Dist_Zone = factor(Dist_Zone,
+                            levels = paste(1:9)))
+
+LV_rebal_sf_list_summary <- new_results_parallel %>% 
+  left_join(LV_rebal_sf_list_2 %>% dplyr::select(vehicleId, Dist_Zone, audit_date), by = c("vehicleId", "audit_date")) %>% 
+  group_by(audit_date, Dist_Zone, operators, .drop = FALSE) %>% 
+  summarize(scooters = n()) %>% 
+  filter(str_detect(operators, "Bird|Lime"),
+         !is.na(Dist_Zone)) %>%
+  ungroup() %>%
+  group_by(audit_date, operators) %>%
+  mutate(scooter_total = sum(scooters),
+         scooter_pct = scooters / scooter_total)
+
+LV_rebal_sf_list_summary_2 <- LV_rebal_sf_list_summary %>% 
+  dplyr::select(-scooter_pct) %>% 
+  spread(Dist_Zone, scooters, sep = "_") %>% 
+  mutate(Dist_8_pct = ifelse(is.na(Dist_Zone_8 / scooter_total), 0, Dist_Zone_8 / scooter_total), 
+         Dist_1_9_pct = ifelse(is.na((Dist_Zone_1 + Dist_Zone_9) / scooter_total), 0, (Dist_Zone_1 + Dist_Zone_9) / scooter_total),
+         compliance = case_when(scooter_total > 150 & Dist_1_9_pct < 0.2 ~ "No",
+                                scooter_total > 350 & (Dist_1_9_pct < 0.2 | Dist_8_pct < 0.1) ~ "No",
+                                TRUE ~ "Yes"))
+
+LV_rebal_sf_list_summary_map <- LV_rebal_sf_list_summary %>% 
+  ungroup() %>% 
+  group_by(Dist_Zone, operators) %>% 
+  summarize(scooter_pct = mean(scooter_pct, na.rm = TRUE)) %>% 
+  left_join(LV_distro_areas, by = "Dist_Zone") %>% 
+  st_as_sf() %>% 
+  arrange(operators)
+
+LV_distro_areas_map <- LV_distro_areas %>% 
+  mutate(Dist_Zone2 = case_when(Dist_Zone %in% c(1, 9) ~ "Zones 1 and 9 (20%)",
+                                Dist_Zone == 8 ~ "Zone 8 (10%)",
+                                TRUE ~ NA_character_))
+
+ggplot() +
+  geom_sf(data = LV_distro_areas_map, aes(fill = Dist_Zone2)) +
+  scale_fill_viridis_d(name = "Distribution Zones",
+                       limits = c("Zones 1 and 9 (20%)", "Zone 8 (10%)"),
+                       direction = -1, 
+                       na.value = "lightgray") +
+  mapTheme() +
+  labs(title = "Scooter Rebalancing Requirements in Louisville")
+
+LV_rebal_sf_list_summary_2_map <- LV_rebal_sf_list_summary_2 %>% 
+  gather(dist_zone, dist_pct, Dist_8_pct:Dist_1_9_pct) %>% 
+  mutate(requirement = case_when(dist_zone == "Dist_8_pct" ~ 0.1,
+                                 dist_zone == "Dist_1_9_pct" ~ 0.2,
+                                 TRUE ~ NA_real_),
+         dist_zone = factor(case_when(dist_zone == "Dist_8_pct" ~ "Dist_8_pct",
+                                      dist_zone == "Dist_1_9_pct" ~ "Dist_1_9_pct",
+                                      TRUE ~ NA_character_),
+                            levels = c("Dist_8_pct", "Dist_1_9_pct"),
+                            labels = c("Zone 8", "Zone 1 & 9")))
+
+ggplot(LV_rebal_sf_list_summary_2_map,
+       aes(x = audit_date,
+           y = dist_pct, 
+           fill = operators)) +
+  geom_bar(stat = "identity",
+           position = "dodge") +
+  geom_hline(data = LV_rebal_sf_list_summary_2_map, 
+             aes(yintercept = requirement),
+             color = "red",
+             size = 1) +
+  facet_wrap(operators~dist_zone) +
+  plotTheme +
+  labs(title = "Percentage of Scooters in Distribution Zones",
+       subtitle = "Each audit conducted at 7AM",
+       y = "Percentage of all Scooters",
+       x = "Audit Date")  +
+  scale_x_datetime(date_labels = "%Y-%m-%d",
+                   breaks = LV_rebal_sf_list_summary_2_map$audit_date) + 
+  scale_fill_discrete(name = "Distribution Zone") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+LV_audit_map <- LV_rebal_sf_list_2 %>% 
+  filter(audit_date == as.POSIXct("2019-11-15 12:00:00 EST")) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = LV_proj)
+
+ggplot() +
+  geom_sf(data = LV_distro_areas, fill = "lightgray") +  
+  geom_sf(data = LV_audit_map %>% filter(str_detect(operators, "Lime|Bird")),
+          aes(color = operators, fill = operators)) +
+  facet_wrap(~operators, ncol = 1) +
+  mapTheme() +
+  labs(title = "Scooter Location Audit on 11-15-2019",
+       subtitle = "Providers are not meeting their distribution requirements in zones 1, 8, and 9.")
+```
+
+### 8.8 Set up and run models
+
+```{r, echo = TRUE, eval = FALSE}
+
+
+# Reads in data 
+Model_panel_RDS <- file.path(data_directory, "~RData/Model_panel")
+# saveRDS(Model_panel,
+#         file = Model_panel_RDS)
+# Model_panel <- readRDS(Model_panel_RDS)
+
+Model_clean <- na.omit(Model_panel)
+Model_clean <- Model_clean %>%
+  dplyr::select(-c(MEAN_COMMUTE_TIME,GEOID, CENTROID_X, CENTROID_Y, CITY))
+
+Model_clean_RDS <- file.path(data_directory, "~RData/Model_clean")
+# saveRDS(Model_clean,
+#         file = Model_clean_RDS)
+# Model_clean <- readRDS(Model_clean_RDS)
+
+# delete usused osm data KNN. COUNT, DENSITY
+Model_clean <- Model_clean %>%
+   dplyr::select(-starts_with('DENSITY'), -starts_with('KNN'), -starts_with('COUNT'), -ends_with('LENGTH'))
+
+# Try linear regression model
+reg1 <- 
+  lm(ORIGINS_CNT ~ ., data= as.data.frame(Model_clean))
+
+# summary(reg1)
+
+### TidyModel from Matt's class ####
+#set.seed(717)
+theme_set(theme_bw())
+"%!in%" <- Negate("%in%")
+
+#create 20 cvID for later 20-fold cross-validation
+Model_clean_2 <- Model_clean %>%
+  mutate(cvID = sample(round(nrow(Model_clean) / 78), size=nrow(Model_clean), replace = TRUE))
+
+### Initial Split for Training and Test ####
+data_split <- initial_split(Model_clean_2, strata = "ORIGINS_CNT", prop = 0.75)
+train.set <- training(data_split)
+test.set  <- testing(data_split)
+
+### Cross Validation
+## LOGOCV on Neighborhood with group_vfold_cv()
+cv_splits_geo <- group_vfold_cv(train.set,  strata = "ORIGINS_CNT", group = "cvID")
+print(cv_splits_geo)
+
+### Create Recipes ####
+# Feature Creation
+model_rec <- recipe(ORIGINS_CNT ~ ., data = train.set) %>%
+  update_role(cvID, new_role = "cvID") %>%
+  step_other(cvID, threshold = 0.005) %>% #pool infrequently occurrin values into an "other" category.
+  step_dummy(all_nominal()) %>%
+  #  step_log(ORIGINS_CNT) %>%  #has zero, cannot log 
+  step_zv(all_predictors()) %>% #remove variables that contain only a single value.
+  step_center(all_predictors(), -ORIGINS_CNT) %>% #normalize numeric data to have a mean of zero.
+  step_scale(all_predictors(), -ORIGINS_CNT)  #normalize numeric data to have a standard deviation of one.
+#  %>% step_ns(Latitude, Longitude, options = list(df = 4)) #create new columns that are basis expan- sions of variables using natural splines.
+
+# See the data after all transformations
+glimpse(model_rec %>% prep() %>% juice())  #juice: extract finalized training set
+model_rec
+linear_reg
+
+# Model specifications
+lm_plan <- 
+  linear_reg() %>% 
+  set_engine("lm") # kerast
+
+glmnet_plan <- 
+  linear_reg() %>% 
+  set_args(penalty  = tune()) %>%
+  set_args(mixture  = tune()) %>%
+  set_engine("glmnet")
+
+rf_plan <- 
+  rand_forest() %>%
+  set_args(mtry  = tune()) %>%
+  set_args(min_n = tune()) %>%
+  set_args(trees = 1000) %>% 
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("regression")
+
+#XGB: Extreme Gradient Boosting
+XGB_plan <- 
+  boost_tree() %>%
+  set_args(mtry  = tune()) %>%
+  set_args(min_n = tune()) %>%
+  set_args(trees = 100) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression")
+
+
+# Hyperparameter grid for glmnet (penalization)
+glmnet_grid <- expand.grid(penalty = seq(0, 1, by = .25), 
+                           mixture = seq(0,1,0.25))
+rf_grid <- expand.grid(mtry = c(2,5), 
+                       min_n = c(1,5))  #randowm forest, 
+xgb_grid <- expand.grid(mtry = c(3,5), 
+                        min_n = c(1,5))
+
+rf_grid
+
+# create workflow
+lm_wf <-
+  workflow() %>% 
+  add_recipe(model_rec) %>% 
+  add_model(lm_plan)
+glmnet_wf <-
+  workflow() %>% 
+  add_recipe(model_rec) %>% 
+  add_model(glmnet_plan)
+rf_wf <-
+  workflow() %>% 
+  add_recipe(model_rec) %>% 
+  add_model(rf_plan)
+xgb_wf <-
+  workflow() %>% 
+  add_recipe(model_rec) %>% 
+  add_model(XGB_plan)
+
+# fit model to workflow and calculate metrics
+control <- control_resamples(save_pred = TRUE, verbose = TRUE)
+
+lm_tuned <- lm_wf %>%
+  tune::fit_resamples(.,
+                      resamples = cv_splits_geo,
+                      control   = control,
+                      metrics   = metric_set(rmse, rsq))
+
+glmnet_tuned <- glmnet_wf %>%
+  tune::tune_grid(.,
+                  resamples = cv_splits_geo,
+                  grid      = glmnet_grid,
+                  control   = control,
+                  metrics   = metric_set(rmse, rsq))
+
+rf_tuned <- rf_wf %>%
+  tune::tune_grid(.,
+                  resamples = cv_splits_geo,
+                  grid      = rf_grid,
+                  control   = control,
+                  metrics   = metric_set(rmse, rsq))
+
+xgb_tuned <- xgb_wf %>%
+  tune::tune_grid(.,
+                  resamples = cv_splits_geo,
+                  grid      = xgb_grid,
+                  control   = control,
+                  metrics   = metric_set(rmse, rsq))
+
+lm_tuned
+rf_tuned
+
+## metrics across grid
+# autoplot(xgb_tuned)
+# collect_metrics(xgb_tuned)
+## 'Best' by some metric and margin
+show_best(lm_tuned, metric = "rmse", n = 15, maximize = FALSE)
+show_best(glmnet_tuned, metric = "rmse", n = 15, maximize = FALSE)
+show_best(rf_tuned, metric = "rmse", n = 15, maximize = FALSE)
+#min_n = 5, less complex, tree grows down to the level with having 5 obsrvations
+#min_n = 1, more complex, tree grows down to the very bottom level 
+show_best(xgb_tuned, metric = "rmse", n = 15, maximize = FALSE)
+
+lm_best_params     <- select_best(lm_tuned, metric = "rmse", maximize = FALSE)
+glmnet_best_params <- select_best(glmnet_tuned, metric = "rmse", maximize = FALSE)
+rf_best_params     <- select_best(rf_tuned, metric = "rmse", maximize = FALSE)
+xgb_best_params    <- select_best(xgb_tuned, metric = "rmse", maximize = FALSE)
+
+## Final workflow
+lm_best_wf     <- finalize_workflow(lm_wf, lm_best_params)
+glmnet_best_wf <- finalize_workflow(glmnet_wf, glmnet_best_params)
+rf_best_wf     <- finalize_workflow(rf_wf, rf_best_params)
+xgb_best_wf    <- finalize_workflow(xgb_wf, xgb_best_params)
+
+
+# last_fit() emulates the process where, after determining the best model, the final fit on the entire training set is needed and is then evaluated on the test set.
+lm_val_fit_geo <- lm_best_wf %>% 
+  last_fit(split     = data_split,
+           control   = control,
+           metrics   = metric_set(rmse, rsq))
+
+glmnet_val_fit_geo <- glmnet_best_wf %>% 
+  last_fit(split     = data_split,
+           control   = control,
+           metrics   = metric_set(rmse, rsq))
+
+rf_val_fit_geo <- rf_best_wf %>% 
+  last_fit(split     = data_split,
+           control   = control,
+           metrics   = metric_set(rmse, rsq))
+
+xgb_val_fit_geo <- xgb_best_wf %>% 
+  last_fit(split     = data_split,
+           control   = control,
+           metrics   = metric_set(rmse, rsq))
+```
+
+### 8.9 Tune models
+
+```{r, echo = TRUE, eval = FALSE}
+## normalization
+Model_clean_area$ORIGINS_CNT <- Model_clean_area$ORIGINS_CNT/Model_clean_area$area
+Model_clean_area$TOTPOP <- Model_clean_area$TOTPOP/Model_clean_area$area
+# Model_clean_area <- Model_clean_area%>% st_set_geometry(NULL)
+
+osm_features <- c("RATIO_RETAIL","RATIO_OFFICE", "RATIO_RESTAURANT", "RATIO_PUBLIC_TRANSPORT",
+                  "RATIO_LEISURE","RATIO_TOURISM", "RATIO_COLLEGE","RATIO_CYCLEWAY","RATIO_STREET",
+                  "JOBS_IN_TRACT", "WORKERS_IN_TRACT")
+
+census_features <- c("TOTPOP", "TOTHSEUNI", "MDHHINC",              
+                     "MDAGE", "MEDVALUE",          
+                     "MEDRENT", "PWHITE",                
+                     "PTRANS", "PDRIVE",                
+                     "PFEMALE", "PCOM30PLUS",            
+                     "POCCUPIED", "PVEHAVAI")
+
+# with 0
+# one model ####
+data_split <- initial_split(Model_clean %>% dplyr::select(-GEOID), strata = "ORIGINS_CNT", prop = 0.75)
+train.set <- training(data_split)
+test.set  <- testing(data_split)
+
+model1 <- randomForest(ORIGINS_CNT ~ ., data = train.set %>% dplyr::select(-CITY),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+
+# Predicting on train set
+train.set$pred_rf <- predict(model1, train.set, type = "class")
+train.set$AE_rf <- abs(train.set$pred_rf - train.set$ORIGINS_CNT)
+train.set$Error_rf <- train.set$pred_rf - train.set$ORIGINS_CNT
+mean(train.set$AE_rf)
+mean(train.set$ORIGINS_CNT)
+
+test.set$pred_rf <- predict(model1, test.set, type = "class")
+test.set$AE_rf <- abs(test.set$pred_rf - test.set$ORIGINS_CNT)
+test.set$Error_rf <- test.set$pred_rf - test.set$ORIGINS_CNT
+mean(test.set$AE_rf)
+mean(test.set$ORIGINS_CNT)
+
+
+# two models ####
+data_split <- initial_split(Model_clean %>% dplyr::select(-GEOID), strata = "ORIGINS_CNT", prop = 0.75)
+train.set <- training(data_split)
+test.set  <- testing(data_split)
+
+
+model1 <- randomForest(ORIGINS_CNT ~ ., data = as.data.frame(train.set) %>% dplyr::select(osm_features, ORIGINS_CNT),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+
+model2 <- randomForest(ORIGINS_CNT ~ ., data = as.data.frame(train.set) %>% dplyr::select(census_features, ORIGINS_CNT),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+
+# Predicting on train set
+train.set$pred_OSM <- predict(model1, train.set, type = "class")
+train.set$pred_census <- predict(model2, train.set, type = "class")
+test.set$pred_OSM <- predict(model1, test.set, type = "class")
+test.set$pred_census <- predict(model2, test.set, type = "class")
+
+model3 <- randomForest(ORIGINS_CNT ~ ., data = as.data.frame(train.set) %>% dplyr::select(pred_OSM, pred_census, ORIGINS_CNT),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+train.set$pred_final <- predict(model3, train.set, type = "class")
+train.set$AE_rf <- abs(train.set$pred_final - train.set$ORIGINS_CNT)
+train.set$Error_rf <- train.set$pred_final - train.set$ORIGINS_CNT
+mean(train.set$AE_rf)
+mean(train.set$ORIGINS_CNT)
+
+test.set$pred_final <- predict(model3, test.set, type = "class")
+test.set$AE_rf <- abs(test.set$pred_final - test.set$ORIGINS_CNT)
+test.set$Error_rf <- test.set$pred_final - test.set$ORIGINS_CNT
+mean(test.set$AE_rf)
+mean(test.set$ORIGINS_CNT)
+
+
+# WITHOUT 0
+# one model ####
+data_split <- initial_split(Model_clean %>% dplyr::select(-GEOID), strata = "ORIGINS_CNT", prop = 0.75)
+train.set <- training(data_split)
+test.set  <- testing(data_split)
+
+train.set <- train.set %>% subset(train.set$ORIGINS_CNT!=0)
+test.set <- test.set %>% subset(test.set$ORIGINS_CNT!=0)
+
+model1 <- randomForest(ORIGINS_CNT ~ ., data = train.set %>% dplyr::select(-CITY),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+
+# Predicting on train set
+train.set$pred_rf <- predict(model1, train.set, type = "class")
+train.set$AE_rf <- abs(train.set$pred_rf - train.set$ORIGINS_CNT)
+train.set$Error_rf <- train.set$pred_rf - train.set$ORIGINS_CNT
+mean(train.set$AE_rf)
+mean(train.set$ORIGINS_CNT)
+
+test.set$pred_rf <- predict(model1, test.set, type = "class")
+test.set$AE_rf <- abs(test.set$pred_rf - test.set$ORIGINS_CNT)
+test.set$Error_rf <- test.set$pred_rf - test.set$ORIGINS_CNT
+mean(test.set$AE_rf)
+mean(test.set$ORIGINS_CNT)
+
+
+# two models ####
+data_split <- initial_split(Model_clean %>% dplyr::select(-GEOID), strata = "ORIGINS_CNT", prop = 0.75)
+train.set <- training(data_split)
+test.set  <- testing(data_split)
+
+train.set <- train.set %>% subset(train.set$ORIGINS_CNT!=0)
+test.set <- test.set %>% subset(test.set$ORIGINS_CNT!=0)
+
+model1 <- randomForest(ORIGINS_CNT ~ ., data = as.data.frame(train.set) %>% dplyr::select(osm_features, ORIGINS_CNT),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+
+model2 <- randomForest(ORIGINS_CNT ~ ., data = as.data.frame(train.set) %>% dplyr::select(census_features, ORIGINS_CNT),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+
+# Predicting on train set
+train.set$pred_OSM <- predict(model1, train.set, type = "class")
+train.set$pred_census <- predict(model2, train.set, type = "class")
+test.set$pred_OSM <- predict(model1, test.set, type = "class")
+test.set$pred_census <- predict(model2, test.set, type = "class")
+
+model3 <- randomForest(ORIGINS_CNT ~ ., data = as.data.frame(train.set) %>% dplyr::select(pred_OSM, pred_census, ORIGINS_CNT),
+                       ntree = 1000, 
+                       mtry = 2, engine = 'ranger', importance = TRUE)
+train.set$pred_final <- predict(model3, train.set, type = "class")
+train.set$AE_rf <- abs(train.set$pred_final - train.set$ORIGINS_CNT)
+train.set$Error_rf <- train.set$pred_final - train.set$ORIGINS_CNT
+mean(train.set$AE_rf)
+mean(train.set$ORIGINS_CNT)
+
+test.set$pred_final <- predict(model3, test.set, type = "class")
+test.set$AE_rf <- abs(test.set$pred_final - test.set$ORIGINS_CNT)
+test.set$Error_rf <- test.set$pred_final - test.set$ORIGINS_CNT
+mean(test.set$AE_rf)
+mean(test.set$ORIGINS_CNT)
+
+
+# LOGO - CITY
+## ALL DATA
+data_split <- initial_split(Model_clean %>% dplyr::select(-GEOID), strata = "ORIGINS_CNT", prop = 0.75)
+train.set <- training(data_split)
+test.set  <- testing(data_split)
+train.set <- train.set %>% dplyr::select(osm_features, CITY, ORIGINS_CNT)
+
+model_rec <- recipe(ORIGINS_CNT ~ ., data = train.set) %>%
+  update_role(CITY, new_role = "CITY") %>%
+  step_other(CITY, threshold = 0.005) %>% #pool infrequently occurrin values into an "other" category.
+  step_dummy(all_nominal(), -CITY) %>%
+  #  step_log(ORIGINS_CNT) %>%  #has zero, cannot log 
+  step_zv(all_predictors()) %>% #remove variables that contain only a single value.
+  step_center(all_predictors(), -ORIGINS_CNT) %>% #normalize numeric data to have a mean of zero.
+  step_scale(all_predictors(), -ORIGINS_CNT)  #normalize numeric data to have a standard deviation of one.
+
+rf_plan <- 
+  rand_forest() %>%
+  set_args(mtry  = tune()) %>%
+  set_args(min_n = tune()) %>%
+  set_args(trees = 1000) %>% 
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("regression")
+
+rf_grid <- expand.grid(mtry = c(2,5), 
+                       min_n = c(1,5))
+
+rf_wf <-
+  workflow() %>% 
+  add_recipe(model_rec) %>% 
+  add_model(rf_plan)
+control <- control_resamples(save_pred = TRUE, verbose = TRUE)
+
+rf_tuned <- rf_wf %>%
+  tune::tune_grid(.,
+                  resamples = cv_splits_geo,
+                  grid      = rf_grid,
+                  control   = control,
+                  metrics   = metric_set(rmse, rsq))
+
+rf_best_params     <- select_best(rf_tuned, metric = "rmse", maximize = FALSE)
+
+rf_best_wf     <- finalize_workflow(rf_wf, rf_best_params)
+
+rf_val_fit_geo <- rf_best_wf %>% 
+  last_fit(split     = data_split,
+           control   = control,
+           metrics   = metric_set(rmse, rsq))
+
+rf_best_OOF_preds <- collect_predictions(rf_tuned) %>% 
+  filter(mtry  == rf_best_params$mtry[1] & min_n == rf_best_params$min_n[1])
+
+rf_val_pred_geo     <- collect_predictions(rf_val_fit_geo)
+
+OOF_preds <- data.frame(dplyr::select(rf_best_OOF_preds, .pred, ORIGINS_CNT), model = "RF") %>%
+  mutate(#.pred = exp(.pred),
+    # ORIGINS_CNT = exp(ORIGINS_CNT),
+    RMSE = yardstick::rmse_vec(ORIGINS_CNT, .pred),
+    MAE  = yardstick::mae_vec(ORIGINS_CNT, .pred),
+    MAPE = yardstick::mape_vec(ORIGINS_CNT, .pred))
+
+val_preds <- data.frame(rf_val_pred_geo, model = "rf") %>%
+  left_join(., Model_clean %>% 
+              rowid_to_column(var = ".row") %>% 
+              dplyr::select(CITY, .row), 
+            by = ".row") %>%
+  mutate(# .pred = exp(.pred),
+    # ORIGINS_CNT = exp(ORIGINS_CNT),
+    RMSE = yardstick::rmse_vec(ORIGINS_CNT, .pred),
+    MAE  = yardstick::mae_vec(ORIGINS_CNT, .pred),
+    MAPE = yardstick::mape_vec(ORIGINS_CNT, .pred))
+```
+
+### 8.10 Validate models and visualize predictions/errors
+
+```{r, echo = TRUE, eval = FALSE}
+# Pull best hyperparam preds from out-of-fold predictions
+lm_best_OOF_preds <- collect_predictions(lm_tuned) 
+
+glmnet_best_OOF_preds <- collect_predictions(glmnet_tuned) %>% 
+  filter(penalty  == glmnet_best_params$penalty[1] & mixture == glmnet_best_params$mixture[1])
+
+rf_best_OOF_preds <- collect_predictions(rf_tuned) %>% 
+  filter(mtry  == rf_best_params$mtry[1] & min_n == rf_best_params$min_n[1])
+
+xgb_best_OOF_preds <- collect_predictions(xgb_tuned) %>% 
+  filter(mtry  == xgb_best_params$mtry[1] & min_n == xgb_best_params$min_n[1])
+
+# collect validation set predictions from last_fit model
+lm_val_pred_geo     <- collect_predictions(lm_val_fit_geo)
+glmnet_val_pred_geo <- collect_predictions(glmnet_val_fit_geo)
+rf_val_pred_geo     <- collect_predictions(rf_val_fit_geo)
+xgb_val_pred_geo    <- collect_predictions(xgb_val_fit_geo)
+
+# Aggregate OOF predictions (they do not overlap with Validation prediction set)
+OOF_preds <- rbind(data.frame(dplyr::select(lm_best_OOF_preds, .pred, ORIGINS_CNT), model = "lm"),
+                   data.frame(dplyr::select(glmnet_best_OOF_preds, .pred, ORIGINS_CNT), model = "glmnet"),
+                   data.frame(dplyr::select(rf_best_OOF_preds, .pred, ORIGINS_CNT), model = "RF"),
+                   data.frame(dplyr::select(xgb_best_OOF_preds, .pred, ORIGINS_CNT), model = "xgb")) %>% 
+  group_by(model) %>% 
+  mutate(#.pred = exp(.pred),
+         # ORIGINS_CNT = exp(ORIGINS_CNT),
+         RMSE = yardstick::rmse_vec(ORIGINS_CNT, .pred),
+         MAE  = yardstick::mae_vec(ORIGINS_CNT, .pred),
+         MAPE = yardstick::mape_vec(ORIGINS_CNT, .pred)) %>% 
+  ungroup()
+
+
+
+# average error for each model
+ggplot(data = OOF_preds %>% 
+         dplyr::select(model, MAE) %>% 
+         distinct() , 
+       aes(x = model, y = MAE, group = 1)) +
+  geom_path(color = "red") +
+ # geom_label(aes(label = paste0(round(MAPE,1),"%"))) +
+  theme_bw()
+
+# average MAPE for each model
+ggplot(data = OOF_preds %>% 
+         dplyr::select(model, MAPE) %>% 
+         distinct() , 
+       aes(x = model, y = MAPE, group = 1)) +
+  geom_path(color = "red") +
+  geom_label(aes(label = paste0(round(MAPE,1),"%"))) +
+  theme_bw()
+
+# OOF predicted versus actual
+ggplot(OOF_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
+  geom_point(alpha = 0.3) +
+  geom_abline(linetype = "dashed", color = "red") +
+  geom_smooth(method = "lm", color = "blue") +
+  coord_equal() +
+  facet_wrap(~model, nrow = 2) +
+  xlim(0,60000)+
+  ylim(0,60000)+
+  theme_bw()
+
+
+# Aggregate predictions from Validation set
+val_preds <- rbind(data.frame(lm_val_pred_geo, model = "lm"),
+                   data.frame(glmnet_val_pred_geo, model = "glmnet"),
+                   data.frame(rf_val_pred_geo, model = "rf"),
+                   data.frame(xgb_val_pred_geo, model = "xgb")) %>% 
+  left_join(., Model_clean_2 %>% 
+              rowid_to_column(var = ".row") %>% 
+              dplyr::select(cvID, .row), 
+            by = ".row") %>% 
+  group_by(model) %>%
+  mutate(# .pred = exp(.pred),
+         # ORIGINS_CNT = exp(ORIGINS_CNT),
+         RMSE = yardstick::rmse_vec(ORIGINS_CNT, .pred),
+         MAE  = yardstick::mae_vec(ORIGINS_CNT, .pred),
+         MAPE = yardstick::mape_vec(ORIGINS_CNT, .pred)) %>% 
+  ungroup()
+
+# plot MAE by model type
+ggplot(data = val_preds %>% 
+         dplyr::select(model, MAE) %>% 
+         distinct() , 
+       aes(x = model, y = MAE, group = 1)) +
+  geom_path(color = "red") +
+ # geom_label(aes(label = paste0(round(MAE,1),"%"))) +
+  theme_bw()
+
+# plot MAPE by model type
+ggplot(data = val_preds %>% 
+         dplyr::select(model, MAPE) %>% 
+         distinct() , 
+       aes(x = model, y = MAPE, group = 1)) +
+  geom_path(color = "red") +
+  geom_label(aes(label = paste0(round(MAPE,1),"%"))) +
+  theme_bw()
+
+# Validation Predicted vs. actual
+ggplot(val_preds, aes(x =.pred, y = ORIGINS_CNT, group = model)) +
+  geom_point() +
+  geom_abline(linetype = "dashed", color = "red") +
+  geom_smooth(method = "lm", color = "blue") +
+  coord_equal() +
+  xlim(0,60000)+
+  ylim(0,60000)+
+  facet_wrap(~model, nrow = 2) +
+  theme_bw()
+```
+
+### 8.11 Template for using model to make predictions on new city
+
+```{r, echo = TRUE, eval = FALSE}
+## Philadelphia ####
+## Census
+
+# Read and input census key
+census_key_RDS <- file.path(data_directory,
+                            "~RData/Census/EC_census_key")
+census_key <- readRDS(census_key_RDS)
+tidycensus::census_api_key(census_key, install = TRUE, overwrite = TRUE)
+
+# Collect census data and geometries
+PH_Census_raw <- get_acs(geography = "tract", 
+                         variables = census_vars, 
+                         year = 2018, 
+                         state = "PA", 
+                         geometry = TRUE, 
+                         county = c("Philadelphia"),
+                         output = "wide") %>%
+  rename_census_cols %>%
+  dplyr::select(GEOID, 
+                geometry,
+                census_colNames) %>% 
+  st_transform(2272)
+
+PH_Census_geoinfo <- PH_Census_raw %>%
+  dplyr::select(GEOID, geometry) %>%
+  na.omit()
+
+# extract centroid of each census tract
+PH_Census_geoinfo <- PH_Census_geoinfo %>% 
+  mutate(centroid_X = st_coordinates(st_centroid(PH_Census_geoinfo))[, 1],
+         centroid_Y = st_coordinates(st_centroid(PH_Census_geoinfo))[, 2])
+
+PH_Census <- PH_Census_raw %>% 
+  mutate(pWhite = White_Pop / TotPop,
+         Mean_Commute_Time = Total_Travel_Time / Num_Commuters,
+         pTrans = Total_Public_Trans / Means_of_Transport_pop,
+         pDrive = Total_cartruckvan/Means_of_Transport_pop,
+         pFemale = TotFemale/TotPop,
+         pCom30plus = (Travel_Time_3034 + Travel_Time_3539 + Travel_Time_4044 + Travel_Time_4559 +
+                         Travel_Time_6089 + Travel_Time_90plus) / Total_Travel_Time,
+         pOccupied = Occupied/Total_occupancy,
+         pVehAvai = 1 - No_vehicle / Vehicle_own_pop)
+
+# names(PH_Census)
+
+PH_Census <- PH_Census %>%
+  dplyr::select(GEOID, TotPop, TotHseUni, MdHHInc, MdAge, MedValue, MedRent, pWhite, Mean_Commute_Time,
+                pTrans, pDrive, pFemale, pCom30plus, pOccupied, pVehAvai)
+
+PH_tract_list <- PH_Census_geoinfo$GEOID
+
+PH_Census_ct <- PH_Census %>%
+  filter(PH_Census$GEOID %in% PH_tract_list) %>%
+  st_set_geometry(NULL)
+
+# rejoin geometry infor from ct_PH
+PH_Census_ct <- merge(PH_Census_geoinfo, PH_Census_ct, by = 'GEOID')
+
+## OSM
+
+#********************* the variables******************####
+city_name = "Philadelphia"                              ####
+proj = 2272 # city projection                         ####
+boundary = PH_Census_geoinfo # service area boundary              ####
+census_ct = PH_Census_ct # census tract ecosocia data ####
+#origin_ct = PH_open_ct #census tract with count of trip origins
+census_geoinfo = PH_Census_geoinfo                    ####
+#*****************************************************####
+
+### using osm to grab data####
+college <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("university", "college")) %>%
+  osmdata_sf(.)
+# 
+college <- st_geometry(college$osm_polygons) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  st_centroid() %>%
+  mutate(Legend = 'College',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+#Get_OSM <- function ()
+
+# restaurant ####
+restaurant <- opq (city_name) %>%
+  add_osm_feature(key = 'amenity', value = c("restaurant", "fast_food")) %>%
+  osmdata_sf(.)
+
+restaurant <- st_geometry(restaurant$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Restaurant',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# public transport ####
+public_transport <- opq (city_name) %>%
+  add_osm_feature(key = 'public_transport', value = c("stop_position", "station")) %>%
+  osmdata_sf(.)
+
+public_transport <- st_geometry(public_transport$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Public.Transport',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# retail ####
+retail <- opq (city_name) %>%
+  add_osm_feature(key = 'shop') %>%
+  osmdata_sf(.)
+
+retail <- st_geometry(retail$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Retails',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# office ####
+office <- opq (city_name) %>%
+  add_osm_feature(key = 'office') %>%
+  osmdata_sf(.)
+
+office <- st_geometry(office$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Office',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# cycleway ####
+cycleway <- opq (city_name) %>%
+  add_osm_feature(key = 'cycleway') %>%
+  osmdata_sf(.)
+
+cycleway <- st_geometry(cycleway$osm_lines) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Cycleway',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+cycleway %>% st_join(census_geoinfo %>% st_intersection(boundary))
+
+# leisure  ####
+leisure <- opq (city_name) %>%
+  add_osm_feature(key = 'leisure', value = c('adult_gaming_center','amusement_arcade','common','fitness_center','hackerspace','park',
+                                             'pitch','stadium')) %>%
+  osmdata_sf(.)
+
+leisure <- st_geometry(leisure$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Leisure',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+# tourism  ####
+tourism <- opq (city_name) %>%
+  add_osm_feature(key = 'tourism', value = c("aquarium", "artwork", "attraction", "gallery", "museumm", "theme_park", 'viewpoint', 'zoo')) %>%
+  osmdata_sf(.)
+
+tourism <- st_geometry(tourism$osm_points) %>%
+  st_transform(proj) %>%
+  st_sf() %>%
+  st_intersection(boundary) %>%
+  mutate(Legend = 'Tourism',
+         City = city_name) %>%
+  dplyr::select(Legend, City, geometry)
+
+## code to plot and check the OSM data
+geomggplot()+
+  geom_sf(data = census_ct, fill = "white")+
+  #geom_sf(data = LV_college, shape = 23, fill = "cornflowerblue", size = 2)+
+  geom_sf(data = college, color = "red", size = 1.5)+
+  geom_sf(data = boundary, fill='transparent')+
+  labs(title = paste("Location of offices, retails, and colleges in",city_name),
+       subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+  mapTheme()
+
+grid.arrange(
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = cycleway, color = "chartreuse3", size = 1.5, alpha = 0.6)+
+    geom_sf(data = leisure, color = "lightsalmon",alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of cycleway and leisure places in", city_name),
+         subtitle = "Green lines as cycleway and light pink dots as leisure places") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = restaurant, color = "turquoise",alpha = 0.6)+
+    geom_sf(data = tourism, color = "hotpink", alpha = 0.6)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of restaurant and tourism spots in", city_name),
+         subtitle = "Turqoise dots as restaurants and pink dots as tourism spots") +
+    mapTheme(),
+  
+  ggplot()+
+    geom_sf(data = census_ct, fill = "white")+
+    geom_sf(data = office, color = "indianred2", alpha = 0.6, size = 2)+
+    geom_sf(data = retail, color = "orange", alpha = 0.6, size = 2)+
+    geom_sf(data = college, shape = 23, fill = "cornflowerblue", size = 2)+
+    geom_sf(data = boundary,fill='transparent')+
+    labs(title = paste("Location of offices, retails, and colleges in", city_name),
+         subtitle = "Red dots as office, orange dots as retails, and blue dots as colleges") +
+    mapTheme(),
+  ncol = 3)
+
+# street
+PH_street <- st_read('http://data-phl.opendata.arcgis.com/datasets/c36d828494cd44b5bd8b038be696c839_0.geojson') %>%
+  st_transform(2272)
+
+PH_street <- PH_street %>% st_join(PH_Census_geoinfo)
+
+PH_street_ct_len <- st_intersection(PH_street,PH_Census_geoinfo) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(street_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(PH_Census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+
+PH_street_ct_len$street_length <- replace_na(PH_street_ct_len$street_length,0)
+
+census_panel <- census_geoinfo
+
+## count ####
+census_geoinfo$area <- as.numeric(st_area(census_geoinfo))*9.29e-8
+# retail 
+retail_ct <- st_join(census_geoinfo %>% st_intersection(boundary), retail) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_retail= n())
+retail_ct$density_retail <- retail_ct$count_retail/retail_ct$area
+
+# office 
+office_ct <- st_join(census_geoinfo %>% st_intersection(boundary), office) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_office= n())
+office_ct$density_office <- office_ct$count_office/office_ct$area
+
+# restaurant 
+restaurant_ct <- st_join(census_geoinfo %>% st_intersection(boundary),restaurant) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_restaurant= n())
+restaurant_ct$density_restaurant <- restaurant_ct$count_restaurant/restaurant_ct$area
+
+# public transport
+public_transport_ct <- st_join(census_geoinfo %>% st_intersection(boundary),public_transport) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_pubtran= n())
+public_transport_ct$density_pubtran <- public_transport_ct$count_pubtran/public_transport_ct$area
+
+# cycleway
+cycleway_ct_len <- st_intersection(cycleway, boundary) %>%
+  mutate(length = as.numeric(st_length(.))*0.000189394) %>%
+  group_by(GEOID) %>%
+  summarise(total_length = sum(length)) %>%
+  st_set_geometry(NULL) %>%
+  merge(census_geoinfo, on='GEOID', all.y=T) %>%
+  st_as_sf()
+cycleway_ct_len$total_length <- replace_na(cycleway_ct_len$total_length,0) 
+
+# leisure
+leisure_ct <- st_join(census_geoinfo %>% st_intersection(boundary), leisure) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_leisure= n())
+leisure_ct$density_leisure <- leisure_ct$count_leisure/leisure_ct$area
+
+# tourism
+tourism_ct <- st_join(census_geoinfo %>% st_intersection(boundary), tourism) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_tourism= n())
+tourism_ct$density_tourism <- tourism_ct$count_tourism/tourism_ct$area
+
+# college
+college_ct <- st_join(census_geoinfo %>% st_intersection(boundary), college) %>%
+  group_by(GEOID,area) %>%
+  summarise(count_college= n())
+college_ct$density_college <- college_ct$count_college/college_ct$area
+
+spatial_census <- left_join(census_panel, retail_ct%>%st_set_geometry(NULL)%>%dplyr::select(GEOID, count_retail, density_retail), by = 'GEOID') %>%
+  left_join(office_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_office, density_office), by = 'GEOID') %>%
+  left_join(leisure_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_leisure, density_leisure), by = 'GEOID') %>%
+  left_join(tourism_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_tourism, density_tourism), by = 'GEOID') %>%
+  left_join(public_transport_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_pubtran,density_pubtran), by = 'GEOID') %>%
+  left_join(restaurant_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_restaurant, density_restaurant), by = 'GEOID') %>%
+  left_join(college_ct %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, count_college, density_college), by = 'GEOID') %>%
+  left_join(cycleway_ct_len %>% st_set_geometry(NULL) %>% dplyr::select(GEOID, total_length), by = 'GEOID')
+
+PH_spatial_census <- spatial_census
+PH_spatial_census <- merge(PH_spatial_census, as.data.frame(PH_street_ct_len) %>% dplyr::select(GEOID, street_length), by='GEOID')
+# ratio
+PH_spatial_census$ratio_retail <- PH_spatial_census$count_retail/length(PH_spatial_census$count_retail)[1]
+PH_spatial_census$ratio_office <- PH_spatial_census$count_office/length(PH_spatial_census$count_office)[1]
+PH_spatial_census$ratio_restaurant <- PH_spatial_census$count_restaurant/length(PH_spatial_census$count_office)[1]
+PH_spatial_census$ratio_public_transport <- PH_spatial_census$count_pubtran/length(PH_spatial_census$count_pubtran)[1]
+PH_spatial_census$ratio_leisure <- PH_spatial_census$count_leisure/length(PH_spatial_census$count_leisure)[1]
+PH_spatial_census$ratio_tourism <- PH_spatial_census$count_tourism/length(PH_spatial_census$count_tourism)[1]
+PH_spatial_census$ratio_college <- PH_spatial_census$count_college/length(PH_spatial_census$count_college)[1]
+PH_spatial_census$ratio_cycleway <- PH_spatial_census$total_length/sum(PH_spatial_census$total_length)
+PH_spatial_census$ratio_street <- PH_spatial_census$street_length/sum(PH_spatial_census$street_length)
+
+
+PH_spatial_census <- merge(PH_spatial_census, as.data.frame(PH_Census) %>% dplyr::select(-geometry), by='GEOID')
+
+## LODES
+
+# Read in WAC Data
+PH_WAC_file <- file.path(data_directory,
+                         "LODES/pa_wac_S000_JT00_2017.csv.gz")
+
+PH_WAC <- read_csv(PH_WAC_file) %>% 
+  dplyr::select(geocode = w_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(jobs_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% PH_Census_geoinfo$GEOID) # from PH - 20 - Collect Census Data
+
+# Read in RAC Data
+PH_RAC_file <- file.path(data_directory,
+                         "LODES/pa_rac_S000_JT00_2017.csv.gz")
+
+PH_RAC <- read_csv(PH_RAC_file) %>% 
+  dplyr::select(geocode = h_geocode, C000) %>% 
+  mutate(geocode = as.character(substr(geocode, 1, 11))) %>% 
+  group_by(geocode) %>% 
+  summarize(workers_in_tract = sum(C000, na.rm = TRUE)) %>% 
+  filter(geocode %in% PH_Census_geoinfo$GEOID) # from PH - 20 - Collect Census Data
+
+# Join them
+PH_LODES <- left_join(PH_WAC, PH_RAC, by = c("geocode"))
+
+PH_LODES_RDS <- file.path(data_directory, 
+                          "~RData/Philadelphia/PH_LODES")
+
+## Prediction
+PH_spatial_census_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_spatial_census")
+PH_spatial_census <- readRDS(PH_spatial_census_RDS)
+PH_LODES_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_LODES")
+PH_LODES <- readRDS(PH_LODES_RDS)
+PH_model <- merge(PH_spatial_census, PH_LODES, by.x = 'GEOID', by.y = 'geocode')
+PH_model <- PH_model %>%
+  st_set_geometry(NULL)
+PH_model <- PH_model %>% 
+  rename_all(toupper) 
+PH_model <- PH_model %>% dplyr::select(-c(AREA, MEAN_COMMUTE_TIME, CENTROID_X, CENTROID_Y),-starts_with('DENSITY'), -starts_with('COUNT'), -ends_with('LENGTH'))
+
+## Equity Index
+PH_trimmed_model <- PH_trimmed_model %>% na.omit()
+PH_trimmed_model$cntpc <- PH_trimmed_model$Predicted.CNT/PH_trimmed_model$TOTPOP#/PH_trimmed_model$area
+
+PH_top30_pc <- PH_trimmed_model %>% subset(PH_trimmed_model$cntpc>quantile(PH_trimmed_model$cntpc,c(0.3,0.7))[2])
+PH_last30_pc <- PH_trimmed_model %>% subset(PH_trimmed_model$cntpc<quantile(PH_trimmed_model$cntpc,c(0.3,0.7))[1])
+
+mean_MEDHHINC <- abs(dim(PH_trimmed_model %>% filter(MDHHINC<mean(PH_top30_pc$MDHHINC)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(MDHHINC<mean(PH_last30_pc$MDHHINC)))[1]/dim(PH_trimmed_model)[1])
+mean_PWHITE <- abs(dim(PH_trimmed_model %>% filter(PWHITE<mean(PH_top30_pc$PWHITE)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(PWHITE<mean(PH_last30_pc$PWHITE)))[1]/dim(PH_trimmed_model)[1])
+# mean_PFEMALE <- abs(dim(PH_trimmed_model %>% filter(PFEMALE<mean(PH_top30_pc$PFEMALE)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(PFEMALE<mean(PH_last30_pc$PFEMALE)))[1]/dim(PH_trimmed_model)[1])
+# mean_PBAL <- abs(dim(PH_trimmed_model %>% filter(PFEMALE<mean(PH_top30_pc$PFEMALE)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(PFEMALE<mean(PH_last30_pc$PFEMALE)))[1]/dim(PH_trimmed_model)[1])
+# mean_MEDVALUE <- abs(dim(PH_trimmed_model %>% filter(MEDVALUE<mean(PH_top30_pc$MEDVALUE)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(MEDVALUE<mean(PH_last30_pc$MEDVALUE)))[1]/dim(PH_trimmed_model)[1])
+# mean_MEDRENT <- dim(PH_trimmed_model %>% filter(MEDRENT<mean(PH_top30_pc$MEDRENT)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(MEDRENT<mean(PH_last30_pc$MEDRENT)))[1]/dim(PH_trimmed_model)[1]
+# mean_PVEHAVAI <- abs(dim(PH_trimmed_model %>% filter(PVEHAVAI<mean(PH_top30_pc$PVEHAVAI)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(PVEHAVAI<mean(PH_last30_pc$PVEHAVAI)))[1]/dim(PH_trimmed_model)[1])
+mean_MDAGE <- abs(dim(PH_trimmed_model %>% filter(MDAGE<mean(PH_top30_pc$MDAGE)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(MDAGE<mean(PH_last30_pc$MDAGE)))[1]/dim(PH_trimmed_model)[1])
+
+#dim(PH_trimmed_model %>% filter(MDHHINC<mean(PH_top30_pc$MDHHINC)))[1]/dim(PH_trimmed_model)[1] - dim(PH_trimmed_model %>% filter(MDHHINC<mean(PH_last30_pc$MDHHINC)))[1]/dim(PH_trimmed_model)[1]
+
+#calculate the equity index
+sum(mean_MEDHHINC, mean_PWHITE, mean_MDAGE)/3
+```
