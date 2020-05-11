@@ -51,7 +51,7 @@ max_inflow <- max(abs(CH_net_inoutflow$NetInflow))
 max_inflowRate <- max(abs(CH_net_inoutflow$NetInflowRate))
 # library(viridis)
 
-ggplot()+
+CH_outflow_map <- ggplot()+
   geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=Outflow)) +
   #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -60,7 +60,7 @@ ggplot()+
   labs(title='Outflow Map for Chicago, IL') +
   mapTheme()
 
-ggplot()+
+CH_inflow_map <- ggplot()+
   geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=Inflow)) +
   #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -69,7 +69,7 @@ ggplot()+
   labs(title='Inflow Map for Chicago, IL') +
   mapTheme()
 
-ggplot()+
+CH_netinflow_map <- ggplot()+
   geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=NetInflow)) +
   geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -78,7 +78,7 @@ ggplot()+
   labs(title='Net Inflow Map for Chicago',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
   mapTheme()
 
-ggplot()+
+CH_netinflow_rate_map <- ggplot()+
   geom_sf(data = st_sf(CH_net_inoutflow), aes(fill=NetInflowRate)) +
   geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -86,3 +86,31 @@ ggplot()+
   #geom_sf(data = st_sf(most_dropoffs_ct), color='darkblue', fill='transparent', size=1.2) +
   labs(title='Net Inflow Rate Mapfor Chicago',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
   mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "3.1 CH_Inflow.png"),
+       plot = CH_inflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 CH_Outflow.png"),
+       plot = CH_outflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 CH_Net_inflow.png"),
+       plot = CH_netinflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 CH_Net_inflow_rate.png"),
+       plot = CH_netinflow_rate_map,
+       height = 6,
+       width = 6,
+       units = "in")

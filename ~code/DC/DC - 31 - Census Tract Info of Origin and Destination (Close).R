@@ -27,7 +27,7 @@ DC_scooter_ct <- st_join(DC_scooter_ct %>% st_transform(2246), DC_Census_geoinfo
 
 DC_scooter_ct_RDS <- file.path(data_directory, 
                                "~RData/DC/DC_scooter_ct")
-
+DC_scooter_ct <- readRDS(DC_scooter_ct_RDS)
 # saveRDS(DC_scooter_ct,
 #         file = DC_scooter_ct_RDS)
 
@@ -62,7 +62,7 @@ library(viridis)
 
 DC_net_inoutflow <- rename(DC_net_inoutflow, Inflow=Inflow)
 
-ggplot()+
+DC_outflow_map <- ggplot()+
   geom_sf(data = st_sf(DC_net_inoutflow), aes(fill=Outflow)) +
   #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -71,7 +71,7 @@ ggplot()+
   labs(title='Outflow Map for Washington D.C') +
   mapTheme()
 
-ggplot()+
+DC_inflow_map <- ggplot()+
   geom_sf(data = st_sf(DC_net_inoutflow), aes(fill=Inflow)) +
   #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -80,7 +80,7 @@ ggplot()+
   labs(title='Inflow Map for Washington D.C') +
   mapTheme()
 
-ggplot()+
+DC_netinflow_map <- ggplot()+
   geom_sf(data = st_sf(DC_net_inoutflow), aes(fill=NetInflow)) +
   geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -89,7 +89,7 @@ ggplot()+
   labs(title='Net Inflow Map for Washington D.C',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
   mapTheme()
 
-ggplot()+
+DC_netinflow_rate_map <-  ggplot()+
   geom_sf(data = st_sf(DC_net_inoutflow), aes(fill=NetInflowRate)) +
   geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -98,4 +98,30 @@ ggplot()+
   labs(title='Net Inflow Rate Mapfor Washington D.C',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
   mapTheme()
 
+ggsave(file.path(plot_directory,
+                 "3.1 DC_Inflow.png"),
+       plot = DC_inflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
 
+ggsave(file.path(plot_directory,
+                 "3.1 DC_Outflow.png"),
+       plot = DC_outflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 DC_Net_inflow.png"),
+       plot = DC_netinflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 DC_Net_inflow_rate.png"),
+       plot = DC_netinflow_rate_map,
+       height = 6,
+       width = 6,
+       units = "in")

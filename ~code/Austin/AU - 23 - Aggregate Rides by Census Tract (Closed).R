@@ -58,7 +58,7 @@ max_inflow <- max(abs(AU_net_inoutflow$NetInflow))
 max_inflowRate <- max(abs(AU_net_inoutflow$NetInflowRate))
 # library(viridis)
 
-ggplot()+
+AU_outflow_map <- ggplot()+
   geom_sf(data = st_sf(AU_net_inoutflow), aes(fill=Outflow)) +
   #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -67,7 +67,7 @@ ggplot()+
   labs(title='Outflow Map for Austin, TX') +
   mapTheme()
 
-ggplot()+
+AU_inflow_map <- ggplot()+
   geom_sf(data = st_sf(AU_net_inoutflow), aes(fill=Inflow)) +
   #geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1.2) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -76,7 +76,7 @@ ggplot()+
   labs(title='Inflow Map for Austin, TX') +
   mapTheme()
 
-ggplot()+
+AU_netinflow_map <- ggplot()+
   geom_sf(data = st_sf(AU_net_inoutflow), aes(fill=NetInflow)) +
   geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -85,7 +85,7 @@ ggplot()+
   labs(title='Net Inflow Map for Austin',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
   mapTheme()
 
-ggplot()+
+AU_netinflow_rate_map <- ggplot()+
   geom_sf(data = st_sf(AU_net_inoutflow), aes(fill=NetInflowRate)) +
   geom_sf(data = st_sf(most_pickups_ct), color='white', fill='transparent', size=1) +
   #scale_fill_continuous(limits=c(-max_inflow, max_inflow)) +
@@ -94,3 +94,30 @@ ggplot()+
   labs(title='Net Inflow Rate Map for Austin',subtitle='Census tract in white frame is the census tract has most inflow/outflow') +
   mapTheme()
 
+ggsave(file.path(plot_directory,
+                 "3.1 AU_Inflow.png"),
+       plot = AU_inflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 AU_Outflow.png"),
+       plot = AU_outflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 AU_Net_inflow.png"),
+       plot = AU_netinflow_map,
+       height = 6,
+       width = 6,
+       units = "in")
+
+ggsave(file.path(plot_directory,
+                 "3.1 AU_Net_inflow_rate.png"),
+       plot = AU_netinflow_rate_map,
+       height = 6,
+       width = 6,
+       units = "in")
