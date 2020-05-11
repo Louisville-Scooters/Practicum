@@ -80,7 +80,8 @@ This project was produced for the [MUSA/Smart Cities Practicum course (MUSA 801)
 
 In the few short years since they first launched, shared, dockless electric scooters have become ubiquitous sights on streets and sidewalks in cities across America. What may have first been seen as novelties or purely recreational vehicles now play critical roles in many people’s daily transportation routines. Despite being relative newcomers to the urban transportation system, dockless scooters provided over 38 million trips in 2018, more than the number of rides taken on traditional station-based bikeshare systems that year. Yet, while electric scooters have quickly enmeshed themselves in the urban fabric, access to these vehicles is not spread equitably across cities. While residents in wealthier, predominantly white downtown neighborhoods enjoy easy access to shared scooters, residents in poorer but comparably dense parts of cities outside of downtown are underserved by the systems.
 
-In this study, we use a combination of open and private dockless scooter usage data from six American cities to construct a model for predicting ridership in ten cities that do not currently have scooter share systems in place. Our model shows that the business-as-usual approach to introducing scooters into a new market is likely to create inequitable access to the vehicles for residents. While cities such as Louisville, KY have recognized these inequities and instituted distribution requirements to address them, we show through analysis of vehicle rebalancing data that providers do not seem to be complying with these requirements, and stronger enforcement may be necessary. Lastly, we introduce a proof-of-concept web application that allows users to explore the spatial distribution of our model’s predictions for each city and compare them to demographic and socioeconomic variables of interest. We believe that this tool will allow policymakers to anticipate the geography of scooter ridership in their cities and understand - and ultimately plan for - the inequities created by the business-as-usual approach to launching and administering scooter share systems.
+In this study, we use a combination of open and private dockless scooter usage data from six American cities to construct a model for predicting ridership in ten cities that have not had scooter share systems in the past. Our model shows that the business-as-usual approach to introducing scooters into a new market is likely to create inequitable access to the vehicles for residents. While cities such as Louisville, KY have recognized these inequities and instituted distribution requirements to address them, we show through analysis of vehicle rebalancing data that providers do not seem to be complying with these requirements, and stronger enforcement may be necessary. Lastly, we introduce a proof-of-concept web application that allows users to explore the spatial distribution of our model’s predictions for each city and compare them to demographic and socioeconomic variables of interest. We believe that this tool will allow policymakers to anticipate the geography of scooter ridership in their cities and understand - and ultimately plan for - the inequities created by the business-as-usual approach to launching and administering scooter share systems.
+
 
 ## 1.3 Motivation
 
@@ -105,32 +106,37 @@ In addition to the level of geographic aggregation, the ridership data provided 
 ```{r, echo = FALSE}
 data_info <- data.frame(City = c("Louisville", "Washington, DC", "Austin", "Minneapolis", "Kansas City", "Chicago"),
                         GeographicAggregation = c("Coordinates", "Coordinates", "Census Tract", "Street", "Truncated Coordinates", "Census Tract"),
-                        TimePeriodAvailable = c("Nov. 2018 - Dec. 2019", "", "", "May 2019 - Sept. 2019", "June 2019 - Dec. 2019", "June 2019 - Sept. 2019"),
-                        TemporalPrecision = c("Actual time", "Actual time", "", "30 minutes", "15 minutes", "Hour"),
-                        OtherInfo = c("Trip ID\nVehicle ID\nBattery Level", "Trip ID\nVehicle ID\nTrip Distance", "", "Trip ID\nVehicle ID\nTrip Distance", "Trip ID\nVehicle ID\nTrip Distance", "Trip ID\nVehicle ID\nTrip Distance\nCommunity Area Name"),
-                        FleetInfo = c("Operator\nRebalancing\nVehicle Maintenance/Retirement/Entry", "Operator", "", "No", "No", "No"),
+                        TimePeriodAvailable = c("Nov. 2018 - Dec. 2019", "", "April 2018 - Present", "May 2019 - Sept. 2019", "June 2019 - Dec. 2019", "June 2019 - Sept. 2019"),
+                        TemporalPrecision = c("Actual time", "Actual time", "15 minutes", "30 minutes", "15 minutes", "Hour"),
+                        OtherInfo = c("Trip ID <br>Vehicle ID<br>Battery Level", "Trip ID<br>Vehicle ID<br>Trip Distance<br>Trip Duration", "Trip ID<br>Vehicle ID<br>Trip Distance<br>Trip Duration<br>Council District", "Trip ID<br>Vehicle ID<br>Trip Distance<br>Trip Duration", "Trip ID<br>Vehicle ID<br>Trip Distance<br>Trip Duration", "Trip ID<br>Vehicle ID<br>Trip Distance<br>Trip Duration<br>Community Area Name"),
+                        FleetInfo = linebreak(c("Operator <br>Rebalancing <br>Vehicle Maintenance/Retirement/Entry", "Operator", "No", "No", "No", "No")),
                         stringsAsFactors = FALSE)
 ```
 
 ```{r, echo = FALSE}
-kable(data_info,
+kable(data_info, 
       col.names = c("City",
                     "Geographic Aggregation",
                     "Time Period Available", 
                     "Temporal Precision",
                     "Other Info",
-                    "Fleet/Rebalancing Info")) %>% 
+                    "Fleet/Rebalancing Info"),
+      escape = FALSE) %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
 
 Part of our data wrangling process was transforming the ridership data into the same level of spatial aggregation. Chicago, for instance, was already aggregated at the census tract level, so it did not require any additional aggregation.
 
-%%[map of Chicago ridership by census tract for July through September]%%
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/2.1 CH_ride_plot.png"))
+```
 
 Louisville and DC, on the other hand, provided point data. We aggregated this to the census tract level.
 
-%%[map of Louisville and DC points on top
-Map of Louisville and DC census tract aggregation on bottom]%%
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/2.1 LV_ride_plot_disagg.png", "Markdown_plots/2.1 LV_ride_plot_agg.png"))
+```
+
 
 
 ## 2.2 Explanatory Variables
@@ -177,12 +183,89 @@ kable(head(Model_clean, 10) %>%
 
 A map of the 6 cities shows that most rides originate and end in a small number of census tracts.
 
-%%[map showing origins by census tract for each city on left]
-[map showing destinations by census tract for each city on right]%%
+### Scooter Trips by City {.tabset}
+
+#### Louisville
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 LV_Inflow.png", "Markdown_plots/3.1 LV_Outflow.png"))
+```
+
+#### Washington, DC
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 DC_Inflow.png", "Markdown_plots/3.1 DC_Outflow.png"))
+```
+
+#### Austin
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 AU_Inflow.png", "Markdown_plots/3.1 AU_Outflow.png"))
+```
+
+#### Minneapolis
+
+Inflow data is not available for Minneapolis.
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 MNP_Outflow.png"))
+```
+
+#### Kansas City
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 KC_Inflow.png", "Markdown_plots/3.1 KC_Outflow.png"))
+```
+
+#### Chicago
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 CH_Inflow.png", "Markdown_plots/3.1 CH_Outflow.png"))
+```
+
+### {-}
 
 A persistent problem in micromobility programs is unbalanced vehicle flow, when riders take more vehicles away from a place than other riders bring in. Which tracts are “gaining” and “losing” vehicles from user activity alone? While, of course, many rides begin and end within the same census tract, we see below user activity leads to unbalanced flows. Without active rebalancing from providers, vehicles would become concentrated in just a few tracts, and user demand in other tracts would go unsatisfied.
 
-%%[maps showing net flow by census tract for each city]%%
+The plots on the left show the net inflow/outflow of vehicles for each census tract during the study period. The maps on the right show this rate relative to its total inflow; a tract that gained a net of 10 vehicles while seeing a total inflow of 20 vehicles would have an inflow rate of 0.5.
+
+### Net Scooter Flows by City {.tabset}
+
+#### Louisville
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 LV_Net_inflow.png", "Markdown_plots/3.1 LV_Net_inflow_rate.png"))
+```
+
+#### Washington, DC
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 DC_Net_inflow.png", "Markdown_plots/3.1 DC_Net_inflow_rate.png"))
+```
+
+#### Austin
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 AU_Net_inflow.png", "Markdown_plots/3.1 AU_Net_inflow_rate.png"))
+```
+
+#### Minneapolis
+
+Net flow data is not available for Minneapolis.
+
+#### Kansas City
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 KC_Net_inflow.png", "Markdown_plots/3.1 KC_Net_inflow_rate.png"))
+```
+
+#### Chicago
+
+```{r, echo = FALSE, out.height="40%", out.width="40%"}
+include_graphics(c("Markdown_plots/3.1 CH_Net_inflow.png", "Markdown_plots/3.1 CH_Net_inflow_rate.png"))
+```
+
+### {-}
 
 Some of the data sets include information on ride durations and distances. We don’t include investigate those data here, as they were not pertinent to our prediction model, but we do explore them later on when we discuss compliance with distribution requirements.
 
@@ -588,6 +671,7 @@ ggplot(LV_rebal_sf_list_summary_2_map,
                    breaks = LV_rebal_sf_list_summary_2_map$audit_date) + 
   scale_fill_viridis_d(name = "Distribution Zone") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ```
 
 # 5. Model Building
