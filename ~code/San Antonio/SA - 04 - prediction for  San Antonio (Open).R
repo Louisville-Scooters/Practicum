@@ -27,7 +27,7 @@ SA_model <- SA_model %>%
 SA_result <- merge(SA_Census_geoinfo, SA_model %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
 
 ###### race content ##########
-SA_result <- merge(SA_result, as.data.frame(MD_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
+SA_result <- merge(SA_result, as.data.frame(SA_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
 SA_result <- mutate(SA_result, race = ifelse(pWhite > .5, "Majority_White", "Majority_Non_White"))
 
 SA_result %>%
@@ -53,3 +53,15 @@ SA_result_RDS <- file.path(data_directory, "~RData/San Antonio/SA_result")
 saveRDS(SA_result,
         file = SA_result_RDS)
 SA_result <- readRDS(SA_result_RDS)
+
+predict_SA <- ggplot()+
+  geom_sf(data = SA_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for San Antonio, TX') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_SA.png"),
+       plot = predict_SA,
+       width = 6,
+       units = "in")

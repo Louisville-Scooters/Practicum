@@ -78,4 +78,16 @@ ggplot() +
 # MD_result_RDS <- file.path(data_directory, "~RData/Madison/MD_result")
 # saveRDS(MD_result,
 #         file = MD_result_RDS)
-# MD_result <- readRDS(MD_result_RDS)
+MD_result <- readRDS(MD_result_RDS)
+
+predict_MD <- ggplot()+
+  geom_sf(data = MD_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Madison, WI') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_MD.png"),
+       plot = predict_MD,
+       width = 6,
+       units = "in")

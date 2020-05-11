@@ -27,7 +27,7 @@ OM_model <- OM_model %>%
 OM_result <- merge(OM_Census_geoinfo, OM_model %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
 
 ###### race content ##########
-OM_result <- merge(OM_result, as.data.frame(MD_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
+OM_result <- merge(OM_result, as.data.frame(OM_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
 OM_result <- mutate(OM_result, race = ifelse(pWhite > .5, "Majority_White", "Majority_Non_White"))
 
 OM_result %>%
@@ -53,3 +53,15 @@ OM_result_RDS <- file.path(data_directory, "~RData/Omaha/OM_result")
 # saveRDS(OM_result,
 #         file = OM_result_RDS)
 OM_result <- readRDS(OM_result_RDS)
+
+predict_OM <- ggplot()+
+  geom_sf(data = OM_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Omaha, NE') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_OM.png"),
+       plot = predict_OM,
+       width = 6,
+       units = "in")

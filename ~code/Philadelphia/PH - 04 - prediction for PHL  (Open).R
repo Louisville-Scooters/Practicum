@@ -59,7 +59,7 @@ PH_model <- PH_model %>% dplyr::select(-c(AREA, MEAN_COMMUTE_TIME, CENTROID_X, C
 # PH_result <- merge(PH_Census_geoinfo, Model_PH_rf %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
 # 
 # ###### race content ##########
-# PH_result <- merge(PH_result, as.data.frame(MD_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
+# PH_result <- merge(PH_result, as.data.frame(PH_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
 # PH_result <- mutate(PH_result, race = ifelse(pWhite > .5, "Majority_White", "Majority_Non_White"))
 # 
 # PH_result %>%
@@ -81,7 +81,7 @@ PH_model <- PH_model %>%
 PH_result <- merge(PH_Census_geoinfo, PH_model %>% dplyr::select(GEOID, Predicted.CNT), on='GEOID')
 
 ###### race content ##########
-PH_result <- merge(PH_result, as.data.frame(MD_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
+PH_result <- merge(PH_result, as.data.frame(PH_Census) %>% dplyr::select(GEOID, pWhite), on='GEOID')
 PH_result <- mutate(PH_result, race = ifelse(pWhite > .5, "Majority_White", "Majority_Non_White"))
 
 PH_result %>%
@@ -106,4 +106,16 @@ ggplot() +
 # PH_result_RDS <- file.path(data_directory, "~RData/Philadelphia/PH_result")
 # saveRDS(PH_result,
 #         file = PH_result_RDS)
-PH_result <- readRDS(MD_result_RDS)
+PH_result <- readRDS(PH_result_RDS)
+
+predict_PH <- ggplot()+
+  geom_sf(data = PH_trimmed_result %>% na.omit(), aes(fill=Predicted.CNT)) +
+  scale_fill_viridis()+
+  labs(title = 'Predicted Trip Count for Philadelphia, PA') +
+  mapTheme()
+
+ggsave(file.path(plot_directory,
+                 "5.3 predict_PH.png"),
+       plot = predict_PH,
+       width = 6,
+       units = "in")
