@@ -11,7 +11,7 @@ output:
     code_folding: hide
 ---
 
-**%% note %% = internal notes**
+
 
 ```{r setup, include=FALSE}
 data_directory <- file.path(stringr::str_remove(here::here(), 
@@ -32,9 +32,6 @@ library(knitr)
 library(kableExtra)
 ```
 
-%% Read in all scripts here %%
-
-%% cache all inputs and uncache when scripts are updated %%
 
 ```{r load scripts, echo = FALSE, results = "hide"}
 # admin
@@ -72,36 +69,41 @@ source("~code/Model/Model - 01 - Setting up (Open).R")
 
 ## 1.1 About this Project
 
-The following document presents an analysis of shared, dockless electric scooter systems in several American cities and a web tool for predicting scooter demand in cities that do not currently have shared scooters. We focus in particular on the equity implications of these systems: who currently has access to scooters, and who will have access if we keep following the business-as-usual approach? This document presents an overview of our data and use case, a summary and key takeaways from our analysis, and an appendix with all of the R code necessary to replicate our work.
+The following document presents an analysis of shared, dockless electric scooter systems in several American cities and a web tool for predicting scooter demand in cities that do not currently have shared scooters. We focus on the equity implications of these systems: who currently has access to scooters, and who will have access if we keep following the business-as-usual approach? This document presents an overview of our data and use case, a summary and key takeaways from our analysis, and an appendix with all of the R code used in the project.
 
 This project was produced for the [MUSA/Smart Cities Practicum course (MUSA 801)](https://pennmusa.github.io/MUSA_801.io/) taught by Ken Steif, Michael Fichman, and Matt Harris in the Master of Urban Spatial Analytics and Master of City Planning Programs at the University of Pennsylvania. We are deeply grateful to our instructors for their guidance, feedback, and attention throughout the semester, despite the challenges brought on by the ongoing pandemic. We also thank Michael Schnuerle from the City of Louisville Metro Government and Sharada Strasmore from the DC Department of Transportation for providing data that made our rebalancing analysis possible as well as sharing their insights into and knowledge of the scooter and micromobility planning process. Lastly, we would like to acknowledge our classmates in MUSA and city planning, who not only produced incredible projects of their own this semester, but also provided thoughtful feedback and support throughout our time in the programs.
 
 ## 1.2 Abstract
 
-In the few short years since they first launched, shared, dockless electric scooters have become ubiquitous sights on streets and sidewalks in cities across America. What may have first been seen as novelties or purely recreational vehicles now play critical roles in many people’s daily transportation routines. Despite being relative newcomers to the urban transportation system, dockless scooters provided over 38 million trips in 2018, more than the number of rides taken on traditional station-based bikeshare systems that year. Yet, while electric scooters have quickly enmeshed themselves in the urban fabric, access to these vehicles is not spread equitably across cities. While residents in wealthier, predominantly white downtown neighborhoods enjoy easy access to shared scooters, residents in poorer but comparably dense parts of cities outside of downtown are underserved by the systems.
+In the few short years since they first launched, shared, dockless electric scooters have become ubiquitous sights on streets and sidewalks in cities across America. What may have first been seen as novelties or purely recreational vehicles now play critical roles in many people’s daily transportation routines. Despite being relative newcomers to the urban transportation scene, dockless scooters provided over 38 million trips in 2018, more than the number of rides taken on traditional station-based bikeshare systems that year. Yet, despite these vehicles having enmeshed themselves quickly in the urban fabric, access to electric scooters is not spread equitably across cities. While residents in wealthier, predominantly white downtown neighborhoods enjoy easy access to shared scooters, residents in poorer but comparably dense parts of cities outside of downtown are underserved by the systems.
 
-In this study, we use a combination of open and private dockless scooter usage data from six American cities to construct a model for predicting ridership in ten cities that have not had scooter share systems in the past. Our model shows that the business-as-usual approach to introducing scooters into a new market is likely to create inequitable access to the vehicles for residents. While cities such as Louisville, KY have recognized these inequities and instituted distribution requirements to address them, we show through analysis of vehicle rebalancing data that providers do not seem to be complying with these requirements, and stronger enforcement may be necessary. Lastly, we introduce a proof-of-concept web application that allows users to explore the spatial distribution of our model’s predictions for each city and compare them to demographic and socioeconomic variables of interest. We believe that this tool will allow policymakers to anticipate the geography of scooter ridership in their cities and understand - and ultimately plan for - the inequities created by the business-as-usual approach to launching and administering scooter share systems.
+In this study, we use a combination of open and private dockless scooter usage data from six American cities to construct a model for predicting ridership in ten cities that have not had scooter share systems in the past. While our model displayed sizable errors, showing that it requires further calibrating, it also suggests that the business-as-usual approach to introducing scooters into a new market is likely to create inequitable access to the vehicles for residents. While cities such as Louisville, KY have recognized these inequities and instituted distribution requirements to address them, we show through analysis of vehicle rebalancing data that providers do not seem to be complying with these requirements, and stronger enforcement may be necessary. Lastly, we introduce a proof-of-concept [web application](https://ophelialyj.github.io/MUSA_practicum_scooter/#!/) that allows users to explore the spatial distribution of our model’s predictions for each city and compare them to demographic and socioeconomic variables of interest. We believe that this tool will allow policymakers to anticipate the geography of scooter ridership in their cities and understand - and ultimately plan for - the inequities that may be created by the business-as-usual approach to launching and administering scooter share systems.
 
+```{r, echo = FALSE, out.height="70%", out.width="70%", fig.cap="Riders using dockless scooters in San Francisco. [Source](https://www.thegazette.com/subject/news/government/iowa-lawmakers-consider-electronic-scooter-rules-as-cedar-rapids-weighs-including-them-in-bike-share-20190206)."}
+include_graphics(c("Markdown_plots/1. Scooters_2.jpg"))
+```
 
 ## 1.3 Motivation
 
-Since Bird and Lime launched the first shared, dockless electric scooter services in [Santa Monica, California in September 2017](https://www.theverge.com/2018/9/20/17878676/electric-scooter-bird-lime-uber-lyft), scooters have rapidly spread across American cities, becoming a popular form of urban transportation. As of January 2020, there are [340 scooter share programs](https://boxercycles.com/scooter-share-companies/) operating in 242 municipal areas and campuses across 40 different states (plus Washington D.C.). In 2018 alone, [users took 38.5 million trips on electric scooters](https://nacto.org/2019/04/17/84-million-trips-on-shared-bikes-and-scooters/), more than the number of trips taken on more familiar, traditional station-based bikeshare systems. While scooter share providers initially entered new municipalities and markets without local officials’ permission or oversight, leading to spikes in scooter-related injuries and complaints of vehicles blocking sidewalks, cities have begun collaborating through coalitions like the [Open Mobility Foundation](https://www.openmobilityfoundation.org/) to institute some oversight over these programs. Many municipalities are now working with their scooter providers to ensure that their scooter share programs, among other goals, meet safety standards, distribute vehicles equitably, keep sidewalks clear, and protect rider privacy. Data standards like the [Mobility Data Specification (MDS)](https://ladot.io/wp-content/uploads/2018/12/What-is-MDS-Cities.pdf), created by the Los Angeles Department of Transportation, help cities share and monitor scooter ridership data and make sure that providers are complying with their policies.
+Since Bird and Lime launched the first shared, dockless electric scooter services in [Santa Monica, California in September 2017](https://www.theverge.com/2018/9/20/17878676/electric-scooter-bird-lime-uber-lyft), scooters have rapidly spread across American cities, becoming a popular form of urban transportation. As of January 2020, there are [340 scooter share programs](https://boxercycles.com/scooter-share-companies/) operating in 242 municipal areas and campuses across 40 different states (plus Washington, D.C.). In 2018 alone, [users took 38.5 million trips on electric scooters](https://nacto.org/2019/04/17/84-million-trips-on-shared-bikes-and-scooters/), more than the number of trips taken on more familiar, traditional station-based bikeshare systems. While scooter share providers initially entered new municipalities and markets without local officials’ permission or oversight, leading to spikes in scooter-related injuries and complaints of vehicles blocking sidewalks, cities have begun collaborating through coalitions like the [Open Mobility Foundation](https://www.openmobilityfoundation.org/) to institute some oversight over these programs. Many municipalities are now working with their scooter providers to ensure that their scooter share programs, among other goals, meet safety standards, distribute vehicles equitably, keep sidewalks clear, and protect rider privacy. Data standards like the [Mobility Data Specification (MDS)](https://ladot.io/wp-content/uploads/2018/12/What-is-MDS-Cities.pdf), created by the Los Angeles Department of Transportation, help cities share and monitor scooter ridership data and make sure that providers are complying with their policies.
 
 While these data initiatives help address cities manage more mature scooter share programs, there are no widely adopted models or processes in place that help cities without shared scooters introduce the vehicles into their markets. Further, while some cities like Chicago have [issued citations to enforce their requirements for equitable distribution](https://www.chicagotribune.com/business/transportation/ct-biz-scooter-companies-cited-20190702-2wla72ja4bfb7jf4rxnq63o3ty-2wla72ja4bfb7jf4rxnq63o3ty-story.html), not all cities have done so, meaning that in some places, these distribution requirements are without teeth. As we see in our analysis of vehicle distribution in Louisville, scooter companies do not necessarily comply with existing distribution requirements. In this project, we use data from 6 different American cities with shared scooters to develop a model that estimates what peak-season demand will be in cities without existing programs. We use this model to build a prototype for a web application intended to help city officials anticipate the geography of scooter ridership in their cities and understand its relationship to the city’s social and economic geography. Our goal is to create a municipal scooter planning toolkit that helps cities interested in launching scooter share systems learn from other municipalities that already have these systems in place. We hope that cities like Philadelphia, Pennsylvania and Madison, Wisconsin, which are considering adopting scooter share programs, will find this toolkit helpful as they work with providers to bring the vehicles to their communities.
 
 ## 1.4 Summary
 
-Using a combination of publicly available and private scooter ridership data from six American cities, we use machine learning methods to create a model that predicts the total scooter trips that will be taken between July and September in each census tract in 10 cities that do not currently have scooter share programs. Our model uses a total of 24 features encompassing demographic, socioeconomic, and built environment characteristics for the cities to make its predictions. We emphasize that our model predictions reflect both the underlying demand for scooters that may exist in a census tract as well as the impact of the scooter companies’ fleet management and distribution choices. Our model uses existing ridership data to predict how scooter usage would look in a new city if it were to follow the business-as-usual approach.
+Using a combination of publicly available and private scooter ridership data from six American cities, we employ machine learning methods to create a model that predicts the total scooter trips that will be taken between July and September in each census tract in 10 cities that do not currently have scooter share programs. Our model uses a total of 24 features encompassing demographic, socioeconomic, and built environment characteristics for the cities to make its predictions. We emphasize that our model predictions reflect both the underlying demand for scooters that may exist in a census tract as well as the impact of the scooter companies’ fleet management and distribution choices. Our model uses existing ridership data to predict how scooter usage would look in a new city if it were to follow the business-as-usual approach. 
 
-Based on our model predictions, we find that the business-as-usual approach will likely lead to inequitable access in new cities. Census tracts with high predicted ridership tend to be %%[...]%%, whereas tracts with lower ridership tend to be %%[...]%%. We propose combining these socioeconomic indicators into a single Equity Score, which cities could customize to their own priorities and rely on while planning and launching a scooter share system or policy. 
+We then propose an Equity Score, a single metric for describing the equitability of scooter access in a city. This score compares observations and predictions of scooter ridership with various socioeconomic indicators to provide a sense of who a city’s scooter system is or would be serving. Cities could customize this score to their own policy priorities by including different indicators and weighting them accordingly.
+
+Our results show that our model produces reasonable projections for the distribution of ridership in new cities, with most rides occurring in downtown areas and near universities, but that further tuning and additional data are needed to calibrate the raw numbers of scooter rides predicted. Additionally, while the geography of predicted ridership aligns well with our observations in cities that currently have scooters, the statistical distributions for our predictions are not more uniform than they are in reality. This leads to overoptimistic projected Equity Scores for the prediction cities compared to the Equity Scores we observe in the cities that already have shared scooters. As we make improvements to the ridership model in the future, we expect the predicted Equity Scores to align more closely with observed Equity Scores.
 
 # 2. Data
 
 ## 2.1 Outcome Variable and Unit of Analysis
 
-For our unit of analysis, we use the total number of rides taken between July and September of 2019 in each census tract for each city. We chose this time period partly due to data limitations - Chicago only recently instituted scooter share and does not have a full year of data available - and also because the later summer and early fall represent peak ridership. We chose census tracts as our spatial unit of analysis because they represent the highest level of geographic aggregation in the scooter ridership datasets. While the private Louisville and Washington, D.C. datasets provide coordinates for ride pick-ups and drop-offs, Austin’s publicly available dataset aggregates rides to the pick-up and drop-off census tract to protect rider privacy.
+For our unit of analysis, we use the total number of rides taken between July and September of 2019 in each census tract for each city. We chose this time period partly due to data limitations - Chicago only recently instituted scooter share and does not have a full year of data available - and also because the late summer and early fall represent peak ridership. We chose census tracts as our spatial unit of analysis because they represent the highest level of geographic aggregation in the scooter ridership datasets. While the private Louisville and Washington, D.C. datasets provide coordinates for ride pick-ups and drop-offs, Austin’s publicly available dataset aggregates rides to the pick-up and drop-off census tract to protect rider privacy.
 
-In addition to the level of geographic aggregation, the ridership data provided varying information.
+In addition to the level of geographic aggregation, the ridership data provided varying information:
 
 ```{r, echo = FALSE}
 data_info <- data.frame(City = c("Louisville", "Washington, DC", "Austin", "Minneapolis", "Kansas City", "Chicago"),
@@ -168,7 +170,7 @@ For our model features, we use variables from the US Census Bureau and OpenStree
 * Transportation Infrastructure
 * Offices
 
-Our final model uses 24 features built from these variables that served as useful predictors for scooter ridership in a census tract. Our data panel looked like the below:
+Our final model uses 24 features built from these variables as predictors for scooter ridership in a census tract. Our data panel looks like the below:
 
 ```{r, echo = FALSE}
 kable(head(Model_clean, 10) %>% 
@@ -225,7 +227,7 @@ include_graphics(c("Markdown_plots/3.1 CH_Inflow.png", "Markdown_plots/3.1 CH_Ou
 
 ### {-}
 
-A persistent problem in micromobility programs is unbalanced vehicle flow, when riders take more vehicles away from a place than other riders bring in. Which tracts are “gaining” and “losing” vehicles from user activity alone? While, of course, many rides begin and end within the same census tract, we see below user activity leads to unbalanced flows. Without active rebalancing from providers, vehicles would become concentrated in just a few tracts, and user demand in other tracts would go unsatisfied.
+A persistent problem in micromobility programs is unbalanced vehicle flow, when riders take more vehicles away from a place than other riders bring in. Which tracts are “gaining” and “losing” vehicles from user activity alone? While, of course, many rides begin and end within the same census tract, we see below that regular user activity leads to unbalanced flows. Without active rebalancing from providers, vehicles would become concentrated in just a few tracts, and user demand in other tracts would go unsatisfied.
 
 The plots on the left show the net inflow/outflow of vehicles for each census tract during the study period. The maps on the right show this rate relative to its total inflow; a tract that gained a net of 10 vehicles while seeing a total inflow of 20 vehicles would have an inflow rate of 0.5.
 
@@ -267,7 +269,7 @@ include_graphics(c("Markdown_plots/3.1 CH_Net_inflow.png", "Markdown_plots/3.1 C
 
 ### {-}
 
-Some of the data sets include information on ride durations and distances. We don’t include investigate those data here, as they were not pertinent to our prediction model, but we do explore them later on when we discuss compliance with distribution requirements.
+Some of the data sets include information on ride durations and distances. We don’t investigate those data here, as they were not pertinent to our prediction model, but we do explore them later on when we discuss compliance with distribution requirements.
 
 ## 3.2 Feature Variables
 
@@ -277,14 +279,14 @@ The six cities we’ve chosen for the analysis vary greatly in size and demograp
 
 #### Demographic
 
-```{r, echo = FALSE}
-include_graphics("LV_AU_KS_census_plot.png")
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
+include_graphics("Markdown_plots/3.2 Boxplot_demographic.png")
 ```
 
 #### Socio-economic
 
-```{r, echo = FALSE}
-include_graphics("LV_AU_KS_census_plot.png")
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
+include_graphics("Markdown_plots/3.2 Boxplot_socioecon.png")
 ```
 
 ### {-}
@@ -302,20 +304,20 @@ Ultimately, we selected the Ratio versions, because those displayed the greatest
 
 #### Demographic
 
-```{r, echo = FALSE}
-include_graphics("Plots_model/Correlation_scatter_census.png")
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics("Markdown_plots/3.2 Correlation_census.png")
 ```
 
 #### Socio-economic
 
-```{r, echo = FALSE}
-include_graphics("Plots_model/Correlation_scatter_census.png")
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
+include_graphics("Markdown_plots/3.2 Correlation_socioecon.png")
 ```
 
 #### Built Environment
 
-```{r, echo = FALSE}
-include_graphics("Plots_model/Correlation_scatter_census.png")
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
+include_graphics("Markdown_plots/3.2 Correlation_osm.png")
 ```
 
 ### {-}
@@ -367,9 +369,12 @@ kable(final_features) %>%
   pack_rows("Built Environment", 16, 24) 
 ```
 
-Below, we see a display a correlation matrix with the final features:
+Below, we see a display a correlation matrix with the final features. We see that some variables, median rent and median home value, are correlated, but for the most part, our explanatory variables show little collinearity.
 
-%%[corr plot takeaways]%%
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
+include_graphics("Markdown_plots/3.2.3 Correlation.png")
+```
+
 
 # 4. Case Study: Louisville Rebalancing Compliance
 
@@ -393,11 +398,11 @@ Like many cities with scooter share, the City of Louisville has imposed vehicle 
   + Bolt - 150 max vehicles/day - launched July 2019
   + Spin - 150 max vehicles/day - launched August 2019
 
-For privacy reasons, most cities (including Louisville) only post geographically aggregated user ride data on their public open data sites. These datasets, while helpful for identifying broad trends in ridership, can lack the geographic resolution to tell us where exactly riders are going. Additionally, the datasets typically do not include any information on vehicle movements other than user rides, meaning we cannot discern where providers are adding or removing vehicles to and from the fleet through maintenance or rebalancing activity.  For our analysis, the City of Louisville shared their providers' _status changes_ dataset (the "Rebalancing Data"), a non-public dataset that, in addition to user ride data, includes other vehicle events such as rebalancings and maintenance. These data points are also fully disaggregated. Whereas Louisville's public scooter dataset rounds location coordinates to the third decimal point, the Rebalancing Data includes the raw coordinates.
+For privacy reasons, most cities (including Louisville) only post geographically aggregated user ride data on their public open data sites. These datasets, while helpful for identifying broad trends in ridership, can lack the geographic resolution to tell us where exactly riders are going. Additionally, the datasets typically do not include any information on vehicle movements other than user rides, meaning we cannot discern when and where providers are adding or removing vehicles to and from the fleet through maintenance or rebalancing activity. For our analysis, the City of Louisville shared their providers' _status changes_ dataset (the "Rebalancing Data"), a non-public dataset that, in addition to user ride data, includes other vehicle events such as rebalancings and maintenance. These data points are also fully disaggregated. Whereas Louisville's public scooter dataset rounds location coordinates to the third decimal point, the Rebalancing Data includes the raw coordinates.
 
-Using the Rebalancing Data, we investigate whether Louisville's largest two scooter suppliers, Bird and Lime, which are its only suppliers subject to the distribution requirements, have been complying with the city's policy. _At distinct points in time, are Bird and Lime's scooter vehicles distributed across Louisville in compliance with the distribution requirements?_
+Using the Rebalancing Data, we investigate whether Louisville’s largest two scooter suppliers, Bird and Lime have been complying with the city’s rebalancing requirements. _At distinct points in time, are Bird and Lime's scooter vehicles distributed across Louisville in compliance with the distribution requirements?_
 
-A map of zones 1, 8, and 9, which must receive a percentage of Bird and Lime's daily fleet as part of the distribution requirements, is shown below.
+Zones 1, 8, and 9, shown below, must receive a percentage of Bird and Lime’s daily fleet as part of the city’s redistribution requirements.
 
 ```{r, echo = FALSE}
 LV_distro_areas <- LV_distro_areas_raw %>% 
@@ -414,7 +419,7 @@ LV_distro_areas_map <- LV_distro_areas %>%
                                 TRUE ~ NA_character_))
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.height=4, fig.width=6}
 ggplot() +
   geom_sf(data = LV_distro_areas_map, aes(fill = Dist_Zone2)) +
   scale_fill_viridis_d(name = "Distribution Zones",
@@ -457,7 +462,7 @@ LV_inactive_status <- c("rebalance pick up",
 
 We next set time periods for our rebalancing audits. We decided to audit the vehicle fleet at 7AM every Friday for 13 months, from November 15th, 2018 to December 15th, 2019. We chose 7AM because our exploratory analysis revealed to us that most rebalancing activity occurs in the nighttime and early morning hours.
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.height=4, fig.width=6}
 LV_rebal_DOW_data <- LV_rebal_rebalance_only %>% 
   mutate(hour = hour(occurredAt),
          weekday = lubridate::wday(occurredAt, label = TRUE))
@@ -476,9 +481,9 @@ time_intervals <- seq(from = as.POSIXct("2018-11-15 07:00:00 EDT"),
                       by = "1 week")
 ```
 
-We then define a function to extract the most recent Active status in the dataset for each vehicle before our 57 selected audit times. We also remove any scooter whose most recent Active status occurred over 10 days prior to the audit time from the dataset. We assume that these scooters have been removed from the active vehicle fleet without a corresponding status change record.
+We then extract the most recent Active status for each vehicle in the dataset before our 57 selected audit times. We also remove any scooter whose most recent Active status occurred over 10 days prior to the audit time from the dataset. We assume that these scooters have been removed from the active vehicle fleet without a corresponding status change record.
 
-```{r, eval = FALSE, echo = TRUE}
+```{r, eval = FALSE, echo = FALSE}
 plan(multiprocess) ## FOR PARALLEL PROCESSING
 
 LV_extract_latest_status2 <- function(trip_dat, datetime, buffer, 
@@ -542,7 +547,7 @@ glimpse(new_results_parallel)
 
 Next, we aggregate the available scooters across the distribution zones. We determine whether an operator is in compliance with the distribution requirements based on the percentage of the vehicle fleet in zones 1, 8, and 9 and the total size of that vehicle fleet at that time. The two sets of distribution requirements only apply to operators permitted to operate over 150 and over 350 scooters in the city, respectively. While Bird and Lime are each permitted to deploy 450 vehicles now, we were unable to determine when their vehicle limits were raised to 150 and 350. As a proxy for vehicle limit, we instead use the total size of their fleets as reflected in the dataset (`scooter_total`). We acknowledge, however, that this may underestimate the two companies' permitted fleet size at the time, as the maximum active fleet size we calculated during our 57 audits was 339, far short of their 450-vehicle maxes.
 
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = FALSE}
 LV_rebal_sf_list_2 <- new_results_parallel %>% 
   filter(!is.na(long),
          !is.na(lat)) %>% 
@@ -646,9 +651,9 @@ LV_rebal_sf_list_summary_2_map <- LV_rebal_sf_list_summary_2 %>%
 LV_rebal_sf_list_summary_2_map
 ```
 
-Below, we chart the percentage of each operator's vehicle fleet that could be found in the three distribution zones at the time of each audit. The red line on each chart indicates the minimum percentage of the vehicle fleet that must be located in each zone to comply with the distribution requirements.
+Below, we chart the percentage of each operator’s vehicle fleet that could be found in the three distribution zones at the time of each audit. The red line on each chart indicates the minimum percentage of the vehicle fleet that must be located in each zone to comply with the distribution requirements.
 
-While we emphasize again that we are not sure when the distribution requirements took effect for Bird and Lime, we can see that even in the later months of 2019, when we can assume their vehicle fleet limits were near their current 450, there are only two instances where either company was in compliance with at least one of the requirements.
+While we emphasize again that we are not sure when the distribution requirements took effect for Bird and Lime, we can see that even in the later months of 2019, when we can assume their vehicle fleet limits were at or near near their current 450, there are only two instances where either company was in compliance with at least one of the requirements.
 
 ```{r, fig.width = 13, fig.height = 8, echo = FALSE}
 ggplot(LV_rebal_sf_list_summary_2_map,
@@ -685,125 +690,195 @@ We used the final set of features to construct several models that predict raw t
 * **Random Forest:** an ensemble method that aggregates predictions from many decision trees for classification or regression tasks. It employs bagging (bootstrap aggregation) to protect against overfitting the decision trees to the training data.
 * **XGBoost:** another tree-based ensemble method. Unlike random forest, which creates many trees at once and aggregates their results at the end, this method builds trees iteratively, employing boosting in the bagging process to address large prediction errors in previous trees.
 
-The graphic below helps to visualize our model selection process. First, we split the data into a 75%/25% training set and test set, stratified across the six cities. Within the 75% training set, we then used a grid search to select the optimal hyperparameters for each modeling framework. To improve the robustness of the grid search, we used both random k-fold (across 20 folds) and leave-one-group-out (leaving one city out at a time) cross-validation within the training set. In this cross-validation process, each fold or city within the training set is held out while the grid search is run over the remaining folds or cities to select hyperparameters. Predictions are then produced on the hold-out fold or city, and the root mean squared error (RMSE) is calculated for those predictions (out-of-fold error). This process is repeated on each fold and city, and for each modeling framework, we select the hyperparameters for each modeling framework that minimizes the average of RMSEs across folds. Finally, we test these models on the 25% test set and select the framework with the lowest mean absolute error (MAE). 
+The graphic below helps visualize our model selection process. First, we split the data into a 75%/25% training set and test set, stratified across the six cities. Within the 75% training set, we then used a grid search to select the optimal hyperparameters for each of the four modeling frameworks. To improve the robustness of the grid search, we used both random k-fold (across 20 folds) and leave-one-group-out (leaving one city out at a time) cross-validation within the training set. In this cross-validation process, each fold or city within the training set is held out while the grid search is run over the remaining folds or cities to select hyperparameters. Predictions are then produced on the hold-out fold or city, and the root mean squared error (RMSE) is calculated for those predictions (out-of-fold error). This process is repeated on each fold and city, and for each modeling framework, we select the hyperparameters for each modeling framework that minimizes the average of RMSEs across folds. Finally, we test these models on the 25% test set and select the framework with the lowest mean absolute error (MAE). 
 
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.1 Model infographic.png"))
 ```
 
 ## 5.2 Model Evaluation
 
-The plots below show the average MAE and RMSE produced on out-of-group predictions produced using the optimized hyperparameters for each modeling framework. Interestingly, the random forest model had the best performance in terms of MAE but performed poorly in terms of RMSE. Our interpretation of this is that the random forest model was predicting well for many census tracts compared to the other frameworks, but there were a few predictions with very large errors that drove up the RMSE, which is more sensitive to outliers than MAE.  In general, the errors were quite high. This reflects the difficulty of using a fairly small sample of cities that vary greatly to make predictions of raw ridership counts.
+The plots below show the average RMSE produced on out-of-group predictions using the optimized hyperparameters for each modeling framework. We see here that random forest, the model we ultimately chose because it had the lowest MAE on the test set, had the highest out-of-fold RMSE. Our interpretation of this is that the random forest model was predicting well for many census tracts compared to the other frameworks, which yielded a lower MAE, but it also produced a few predictions with very large errors that drove up the RMSE, which is more sensitive to outliers than MAE.  In general, the errors were quite high. This reflects the difficulty of using a fairly small sample of cities that vary greatly to make predictions of raw ridership counts.
 
-**Average RMSE and MAE for Out-of-fold Predictions**
+**Average RMSE for Out-of-fold Predictions**
 
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
-include_graphics(c("Markdown_plots/5.2 RMSEbyModels_OOF.png", "Markdown_plots/5.2 MAEbyModels_OOF.png"))
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
+include_graphics(c("Markdown_plots/5.2 RMSEbyModels_OOF.png"))
 ```
 
 Below, we present scatter plots showing the out-of-fold and out-of-city predictions and errors for each method. We see that errors were larger in general for the out-of-city predictions, again demonstrating the challenge of generalizing ridership predictions across cities with such different characteristics.
 
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
-include_graphics(c("Markdown_plots/5.2 OOF predicted versus actual (city).png", "Markdown_plots/5.2 MAEbyModels_OOF.png"))
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.2 OOF predicted versus actual (cvid).png", "Markdown_plots/5.2 OOF predicted versus actual (city).png"))
 ```
 
-We next plot the MAEs for each model’s predictions on the 25% test set. While we used RMSE for optimizing the models in an attempt to limit extreme outliers, we choose to present MAEs below because they are easier to interpret.  
+We next plot the MAEs for each model’s predictions on the 25% test set. The random forest model clearly performs the best among the four frameworks. The other three models have errors that exceed the average trip count across test set census tracts.
 
 **MAE for Test Set Predictions**
 
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
+```{r, echo = FALSE, out.height="80%", out.width="80%"}
 include_graphics(c("Markdown_plots/5.2 MAEbyModels_valiadation_set.png"))
 ```
 
-Below, we show an example of the out-of-fold predictions and prediction errors made on Austin when it was treated as a hold-out group in cross-validation. Note that the "missing" census tracts in the map below represented those tracts that had been randomly selected for the 25% testing set. We see that ridership was drastically underestimated in a couple downtown census tracts.
+Below, we show an example of the out-of-fold predictions and prediction errors made on Austin when it was treated as a hold-out group in cross-validation. Note that the "missing" census tracts in the map below represent those tracts that had been randomly selected for the 25% testing set. We see that ridership was greatly underestimated in the downtown census tracts in the center of the map. This suggests that our model actually tends to significantly underestimate the skewed distribution of scooter ridership in a city. 
 
-%%[Map of Austin predictions]%%
-
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
-# include_graphics(c("Markdown_plots/5.2 MAEbyModels_valiadation_set.png"))
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.2 predict_AU.png", "Markdown_plots/5.2 Error_AU.png"))
 ```
 
-We average the errors across cities generated by our final random forest model and plot them below. The errors vary significantly across the cities. The median error ranges from a low of 80 in Chicago to a high of over 700 in Louisville.
+We can confirm this intuition by comparing the distribution of observed ridership values in Austin with the distribution of predicted values. Our predictions tend to exhibit a more even distribution than the observed values within a narrower range.
 
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_AU_obsv.png", "Markdown_plots/5.3 Dist_AU_pred.png"))
+```
+
+This is even more apparent when looking at the distribution of our predicted values for other cities. We’ll look at these predictions in more detail in the following section, but these values show significantly less left-skew than the observed values in Austin.
+
+### Distributions for Predicted Ridership on Cities without Scooters {.tabset}
+
+#### Asheville, North Carolina
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_AV.png"))
+```
+
+#### Hartford, Connecticut
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_HF.png"))
+```
+
+#### Houston, Texas
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_HS.png"))
+```
+
+#### Jersey City, New Jersey
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_JC.png"))
+```
+
+#### Jacksonville, Florida
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_JV.png"))
+```
+
+
+#### Madison, Wisconsin
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_MD.png"))
+```
+
+
+#### Omaha, Nebraska
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_OM.png"))
+```
+
+#### Philadelphia, Pennsylvania
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_PH.png"))
+```
+
+#### San Antonio, Texas
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_SA.png"))
+```
+
+#### Syracuse, New York
+
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 Dist_SY.png"))
+```
+
+### {-}
+
+We average the errors across the training cities generated by our final random forest model and plot them below. The errors vary significantly. The median error ranges from a low of 80 in Chicago to a high of over 700 in Louisville.
+
+```{r, echo = FALSE, out.height="90%", out.width="90%"}
 include_graphics(c("Markdown_plots/5.2 MAEbyCity.png"))
 ```
 
-The model also varies greatly in performance across racial contexts. Below, we see variations in error between majority white and majority non-white census tracts in the cities in our study, suggesting that our model tends to underpredict trips in majority white neighborhoods while over-predicting trips in majority non-white areas.
+The model also varies in performance across racial contexts. Below, we see variations in error between majority white and majority non-white census tracts. For some cities, like Austin and Kansas City, our model tends to underpredict trips in majority white neighborhoods while over-predicting trips in majority non-white areas. For other cities like Chicago, Minneapolis, and Washington, DC, however, the errors are relatively consistent across contexts.
 
-%%[Table with comparison across race contexts]%%
-
-```{r, echo = FALSE, out.height="40%", out.width="80%"}
-# include_graphics(c("Markdown_plots/5.2 MAEbyModels_valiadation_set.png"))
+```{r, echo = FALSE, out.height="60%", out.width="60%"}
+include_graphics(c("Markdown_plots/5.3 errors by race.png"))
 ```
 
 ## 5.3 Predictions
 
-Finally, we use our model to produce predictions on 10 cities without scooter share systems. As we would expect, most of the predicted rides are concentrated within the cities’ central business districts and areas near universities. In Philadelphia, for example, we see high predicted ridership in Center City, as well as the neighborhoods around the University of Pennsylvania, Drexel University, and Temple University. However, we also see high predictions in outlying census tracts for some cities.  In Madison, for instance, we see very high predictions for ridership at the western periphery of the city.
+Finally, we use our model to produce predictions on 10 cities without scooter share systems. As we would expect, most of the predicted rides are concentrated within the cities’ central business districts and areas near universities. In Philadelphia, for example, we see high predicted ridership in Center City, as well as the neighborhoods around the University of Pennsylvania, Drexel University, and Temple University. However, we also see high predictions in outlying census tracts for some cities.  In Madison, for instance, we see very high predictions for ridership at the western periphery of the city. 
 
-These plots can be explored interactively in the [web application](https://ophelialyj.github.io/MUSA_practicum_scooter/#!/) we’ve built for this project, which is further described in Section 7.
+These plots can be explored interactively in the [web application](https://ophelialyj.github.io/MUSA_practicum_scooter/#!/) we’ve built for this project, which is further described in [Section 7][7. Web Application].
 
 ### Predicted Ridership by City {.tabset}
 
 #### Asheville, North Carolina
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_AV.png"))
 ```
 
 #### Hartford, Connecticut
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_HF.png"))
 ```
 
 #### Houston, Texas
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_HS.png"))
 ```
 
 #### Jersey City, New Jersey
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_JC.png"))
 ```
 
 #### Jacksonville, Florida
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_JV.png"))
 ```
 
 
 #### Madison, Wisconsin
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_MD.png"))
 ```
 
 
 #### Omaha, Nebraska
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_OM.png"))
 ```
 
 #### Philadelphia, Pennsylvania
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_PH.png"))
 ```
 
 #### San Antonio, Texas
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_SA.png"))
 ```
 
 #### Syracuse, New York
 
-```{r, echo = FALSE, out.height="80%", out.width="80%"}
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
 include_graphics(c("Markdown_plots/5.3 predict_SY.png"))
 ```
 
@@ -815,13 +890,13 @@ As we saw in our exploratory plots, scooter ridership tends to be heavily concen
 
 Here, we propose a framework for an Equity Score metric, which we believe cities can use to assess the equity of scooter access across their communities. The metric can be applied to both existing scooter systems, which have realized distribution patterns, as well as to prospective systems, which have predicted ridership trends. Cities can also easily adjust the metric to fit their own policy priorities. A municipality with a particular focus on intergenerational equity, for example, may choose to weight the median age portion of our equation more highly.
 
-To calculate the Equity Score, we first find the census tracts in each city with the top 30% of ridership (_r~high~_) and the bottom 30% of ridership (_r~low~_), whether realized or predicted. For each of _r~high~_ and _r~low~_, we calculate the average median household income, percentage of the population that is white, and the median age. We then find the absolute difference between the averages for those three variables to calculate three indices, _I~MDHHINC~_, _I~PWHITE~_, and _I~MDAGE~_. The Equity Score is a simple average of those three indices. We based our selection of these variables on [this paper](https://chi.streetsblog.org/wp-content/uploads/sites/4/2016/03/Bikeshare_TRB_submission.pdf) from Ursaki and Aultman-Hall (2015), which examined the equity of access to station-based bikeshare systems in several American cities. 
+To calculate the Equity Score, we first find the census tracts in each city with the top 30% of ridership (_r~high~_) and the bottom 30% of ridership (_r~low~_), whether realized or predicted. For each of _r~high~_ and _r~low~_, we calculate the average median household income, percentage of the population that is white, and the median age. We then find the absolute difference between the averages for those three variables to calculate three indices, _I~MDHHINC~_, _I~PWHITE~_, and _I~MDAGE~_. The Equity Score is a simple average of those three indices, subtracted from 1. We based our selection of these variables on [this paper](https://chi.streetsblog.org/wp-content/uploads/sites/4/2016/03/Bikeshare_TRB_submission.pdf) from Ursaki and Aultman-Hall (2015), which examined the equity of access to station-based bikeshare systems in several American cities. 
 
 $$I_{index} = |\frac{Index_{r_{high}}} {n_{r_{high}}} - \frac{Index_{r_{low}}} {n_{r_{low}}}|$$
 
-$$EquityScore = \frac{I_{MDHHINC} + I_{PWHITE} + I_{MDAGE}} {3}$$
+$$EquityScore = (1 - \frac{I_{MDHHINC} + I_{PWHITE} + I_{MDAGE}} {3}) * 100$$
 
-Below, we present the equity scores for each city in our study. For the six cities that we used to train our model, we used the observed ridership numbers. For the cities that do not currently have scooter share systems, we used the predictions generated from our model.
+Below, we present the Equity Scores for each city in our study. For the six cities that we used to train our model, we used the observed ridership numbers. For the cities that do not currently have scooter share systems, we used the predictions generated from our model. We note that the equity scores for the predicted cities tend to be significantly higher than the equity scores for the observed cities. A possible explanation for this is that our model underpredicts the number of tracts with 0 ridership in cities. Whereas the observed cities tend to have a significant number of tracts that did not experience any rides, the predictions show a smoother distribution of rides. This may have the effect of distorting which census tracts fall into lower 30% of ridership. While future work still needs to be done to improve the performance of the model’s predictions, we believe the Equity Score we’ve presented here is an intuitive framework for cities to use when evaluating whether an existing or prospective dockless scooter program is distributed equitably.
 
 ```{r, echo = FALSE}
 equity_score <- data.frame(City = c("Louisville, KY", 
@@ -856,12 +931,12 @@ equity_score <- data.frame(City = c("Louisville, KY",
                                                  "Predicted",
                                                  "Predicted",
                                                  "Predicted"),
-                           EquityScore = c("",
-                                           "",
-                                           "",
-                                           "",
-                                           "",
-                                           "",
+                           EquityScore = c("86",
+                                           "64",
+                                           "72",
+                                           "62",
+                                           "69",
+                                           "51",
                                            "79",
                                            "95",
                                            "80",
@@ -876,7 +951,7 @@ equity_score <- data.frame(City = c("Louisville, KY",
 ```
 
 ```{r, echo = FALSE}
-kable(equity_score, 
+kable(equity_score,
       col.names = c("City",
                     "Observed or Predicted Ridership",
                     "Equity Score")) %>% 
@@ -886,7 +961,11 @@ kable(equity_score,
 
 # 7. Web Application
 
-We used the predictions generated from our model to create the [Dockless Scooter Planning Toolkit]((https://ophelialyj.github.io/MUSA_practicum_scooter/#!/ "Dockless Scooter Planning Toolkit"), a proof-of-concept web application for cities to use as they consider introducing dockless shared scooters. With this application, cities can explore our predictions for the spatial distribution and volume of scooter ridership in a city. We include features for visualizing how the predicted ridership in a census tract relates to various demographic and socio-economic indicators, such as median income or job density. We also provide an Equity Score for each city using the metric described above, though we emphasize that cities would want to consider tailoring the calculation of that score to align with their policy priorities. Our app includes data for the 10 cities listed in Section 5.3.
+We used the predictions generated from our model to create the [Dockless Scooter Planning Toolkit](https://ophelialyj.github.io/MUSA_practicum_scooter/#!/ "Dockless Scooter Planning Toolkit"), a proof-of-concept web application for cities to use as they consider introducing dockless shared scooters. With this application, cities can explore our predictions for the spatial distribution and volume of scooter ridership at census tract level in ten US cities. We include features for visualizing how the predicted ridership in a census tract relates to various demographic and socio-economic indicators, such as median income or job density. We also provide an Equity Score for each city using the metric described above, though we emphasize that cities would want to consider tailoring the calculation of that score to align with their policy priorities. Our app includes data for the 10 cities listed in [Section 5.3][5.3 Predictions].
+
+```{r, echo = FALSE, out.height="70%", out.width="70%"}
+include_graphics(c("Markdown_plots/7.1 app.PNG"))
+```
 
 # 8. Code Appendix
 
